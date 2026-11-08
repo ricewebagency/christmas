@@ -1,5 +1,5 @@
-import { fetchTakenCabinDishIds, getCabinData, sendCabinDishSelection } from './api-client.js';
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js';
+import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js';
+import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js';
 
 const DEFAULT_CABIN_IMAGE = './assets/images/hogwarts-express-cabin-front-gryffindor.png';
 const BACKDROP_SELECTOR = '[data-cabin-backdrop]';
@@ -23,10 +23,12 @@ const DISH_CONFIRM_SELECTOR = '[data-dish-confirm]';
 const DISH_SELECTED_SUMMARY_SELECTOR = '[data-selected-dish-summary]';
 const DISH_SELECTED_SUMMARY_LABEL_SELECTOR = '[data-selected-dish-label]';
 const DISH_SELECTED_SUMMARY_VALUE_SELECTOR = '[data-selected-dish-value]';
-const DISH_SELECTION_STORAGE_KEY = 'magical-winter-banquet.cabin-dish-selection';
-const DISH_CATALOG_URL = new URL('../assets/files/dishes.json', import.meta.url);
+const DISH_ERROR_SELECTOR = '[data-dish-error]';
 const DISH_SELECTION_LIMIT = 4;
-const CABIN_CONFIRM_REDIRECT_PATH = './chamber';
+const DISH_ERROR_MESSAGES = {
+    taken: 'Alas, another guest claimed one of your dishes just before you. Please choose again.',
+    failed: 'The owl could not deliver your choice, please try again.'
+};
 const CABIN_EXIT_FADE_DURATION_MS = 1300;
 const CABIN_SCREEN_LOADER_DURATION_MS = 2200;
 const TROLLEY_SUBTITLE_FADE_MS = 300;
@@ -339,26 +341,6 @@ function revealParchment() {
     window.dispatchEvent(new Event('reveal-sequence:start'));
 }
 
-function getSavedDishSelection() {
-    const parsedValue = readJsonFromLocalStorage(DISH_SELECTION_STORAGE_KEY, []);
-
-    if (!Array.isArray(parsedValue)) {
-        return [];
-    }
-
-    return parsedValue
-        .filter((value) => typeof value === 'string' && value.trim().length > 0)
-        .slice(0, DISH_SELECTION_LIMIT);
-}
-
-function persistDishSelection(selectedDishIds) {
-    writeJsonToLocalStorage(DISH_SELECTION_STORAGE_KEY, selectedDishIds);
-}
-
-function resetDishSelectionOnCabinOpen() {
-    writeJsonToLocalStorage(DISH_SELECTION_STORAGE_KEY, []);
-}
-
 function fadeOutBodyAndNavigate(destination, durationMs = CABIN_EXIT_FADE_DURATION_MS) {
     if (typeof window === 'undefined' || !destination) {
         return;
@@ -405,16 +387,9 @@ function getDishChoiceId(dish, fallbackText = '') {
     return slugifyDishChoiceId(fallbackText || dish?.name || dish?.name_nl || '');
 }
 
+// Via de API (het menu is in het beheer aan te passen), met dishes.json als fallback.
 async function loadDishCatalog() {
-    const response = await fetch(DISH_CATALOG_URL, {
-        cache: 'no-store'
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to load dishes catalog: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const { data } = await fetchDishCatalog();
     return Array.isArray(data) ? data : [];
 }
 
@@ -526,7 +501,7 @@ function renderDishChoiceGroups(courseGroups) {
     });
 }
 
-async function initDishSelection() {
+async function initDishSelection(guest, { skipIntro = false, editMode = false } = {}) {
     const introPanel = document.querySelector(DISH_INTRO_PANEL_SELECTOR);
     const introButton = document.querySelector(DISH_INTRO_SELECTOR);
     const dishPanel = document.querySelector(DISH_PANEL_SELECTOR);
@@ -536,6 +511,7 @@ async function initDishSelection() {
     const nextButton = document.querySelector(DISH_NEXT_BUTTON_SELECTOR);
     const carouselTrack = document.querySelector(DISH_CAROUSEL_TRACK_SELECTOR);
     const selectedDishSummary = document.querySelector(DISH_SELECTED_SUMMARY_SELECTOR);
+    const dishErrorEl = document.querySelector(DISH_ERROR_SELECTOR);
 
     const selectedDishSummaryLabel = selectedDishSummary instanceof HTMLElement
         ? selectedDishSummary.querySelector(DISH_SELECTED_SUMMARY_LABEL_SELECTOR)
@@ -673,7 +649,7 @@ async function initDishSelection() {
 
     syncDishCarousel();
 
-    const selectedDishIds = new Set(getSavedDishSelection());
+    const selectedDishIds = new Set((guest?.dishIds ?? []).slice(0, DISH_SELECTION_LIMIT));
     const occupiedDishIds = new Set();
     let isSubmittingSelection = false;
     const dishLabelById = new Map();
@@ -793,6 +769,32 @@ async function initDishSelection() {
         dishPanel.classList.remove('pointer-events-none');
     };
 
+    const showDishPanelImmediately = () => {
+        introPanel.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+        dishPanel.classList.remove('hidden', 'pointer-events-none', 'translate-y-1');
+        dishPanel.classList.add('flex', 'opacity-100', 'pointer-events-auto');
+    };
+
+    const setDishError = (message) => {
+        if (dishErrorEl instanceof HTMLElement) {
+            dishErrorEl.textContent = message;
+            dishErrorEl.classList.toggle('hidden', !message);
+        }
+    };
+
+    const refreshTakenDishIds = () => fetchTakenCabinDishIds()
+        .then((response) => {
+            syncOccupiedDishIds(response?.data?.dishIds);
+            syncDishState();
+        })
+        .catch((error) => {
+            console.warn('Could not load already selected dishes.', error);
+        });
+
+    if (skipIntro) {
+        showDishPanelImmediately();
+    }
+
     introButton.addEventListener('click', () => {
         introButton.classList.add('pointer-events-none', 'opacity-0');
         revealDishPanel();
@@ -812,7 +814,6 @@ async function initDishSelection() {
 
             if (selectedDishIds.has(dishId)) {
                 selectedDishIds.delete(dishId);
-                persistDishSelection(Array.from(selectedDishIds));
                 syncDishState();
                 button.blur();
                 return;
@@ -823,22 +824,12 @@ async function initDishSelection() {
             }
 
             selectedDishIds.add(dishId);
-            persistDishSelection(Array.from(selectedDishIds));
+            setDishError('');
             syncDishState();
         });
     });
 
-    void fetchTakenCabinDishIds()
-        .then((response) => {
-            console.log('Taken dishes API response:', response);
-            const takenDishIds = response?.data?.dishIds;
-            syncOccupiedDishIds(takenDishIds);
-            persistDishSelection(Array.from(selectedDishIds));
-            syncDishState();
-        })
-        .catch((error) => {
-            console.warn('Could not load already selected dishes.', error);
-        });
+    void refreshTakenDishIds();
 
     dishConfirmButton.addEventListener('click', async () => {
         if (selectedDishIds.size === 0 || isSubmittingSelection) {
@@ -846,20 +837,42 @@ async function initDishSelection() {
         }
 
         isSubmittingSelection = true;
-        const dishSelection = Array.from(selectedDishIds);
-        persistDishSelection(dishSelection);
+        const dishIds = Array.from(selectedDishIds);
 
+        setDishError('');
         dishConfirmButton.disabled = true;
         dishConfirmButton.classList.add('opacity-35', 'pointer-events-none');
 
         try {
-            await sendCabinDishSelection({ dishSelection });
+            await sendCabinDishSelection({ dishIds });
         } catch (error) {
-            console.warn('Dish selection API update failed; continuing with stored selection.', error);
+            isSubmittingSelection = false;
+
+            if (isApiError(error, 409) && error.code === 'dishes_taken') {
+                error.takenDishIds.forEach((dishId) => occupiedDishIds.add(dishId));
+                syncOccupiedDishIds([...occupiedDishIds]);
+                syncDishState();
+                setDishError(DISH_ERROR_MESSAGES.taken);
+                void refreshTakenDishIds();
+                return;
+            }
+
+            if (isApiError(error, 403) || isApiError(error, 404) || isApiError(error, 409)) {
+                // Sealed, unknown guest or no longer accepted: continue from the actual state.
+                const latestGuest = await getGuest({ refresh: true }).catch(() => null);
+                redirectToPage(getNextStep(latestGuest));
+                return;
+            }
+
+            console.warn('Could not save the dish selection.', error);
+            setDishError(DISH_ERROR_MESSAGES.failed);
+            syncDishState();
+            return;
         }
 
         dishConfirmButton.blur();
-        fadeOutBodyAndNavigate(CABIN_CONFIRM_REDIRECT_PATH);
+        // Changing dishes skips the chamber and returns straight to the map.
+        fadeOutBodyAndNavigate(getPageUrl(editMode ? 'map' : 'chamber'));
     });
 
     syncDishState();
@@ -927,34 +940,37 @@ async function initCabinBackdrop() {
     }
 }
 
-if (typeof document === 'undefined') {
-    void 0;
-} else if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        resetDishSelectionOnCabinOpen();
-        initArrivalAudio();
-        initTrainAudio();
-        initScreenLoader();
-        initTrainShake();
-        initCabinFrontShake();
-        initCabinBackdrop();
-        initDishSelection();
-    }, { once: true });
+// In edit mode the trolley scene is skipped: the parchment opens right after the loader.
+function revealParchmentForEdit() {
+    window.setTimeout(revealParchment, CABIN_SCREEN_LOADER_DURATION_MS);
+}
 
-    window.addEventListener('load', initTrolleyArrival, { once: true });
-} else {
-    resetDishSelectionOnCabinOpen();
+async function bootstrapCabinPage() {
+    const guest = await guardPage('cabin');
+
+    if (!guest) {
+        return;
+    }
+
+    await whenDomReady();
+
+    const editMode = isEditMode();
+
     initArrivalAudio();
     initTrainAudio();
     initScreenLoader();
     initTrainShake();
     initCabinFrontShake();
-    initCabinBackdrop();
-    initDishSelection();
+    void initCabinBackdrop();
+    void initDishSelection(guest, { skipIntro: editMode, editMode });
 
-    if (document.readyState === 'complete') {
+    if (editMode) {
+        revealParchmentForEdit();
+    } else if (document.readyState === 'complete') {
         initTrolleyArrival();
     } else {
         window.addEventListener('load', initTrolleyArrival, { once: true });
     }
 }
+
+void bootstrapCabinPage();

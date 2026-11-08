@@ -1,4 +1,5 @@
-import { getInvitationData, sendSortingHouseResult } from './api-client.js';
+import { getGuest, getInvitationData, isApiError, sendSortingHouseResult } from './api-client.js';
+import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js';
 import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js';
 
 const STORAGE_KEY = 'magical-winter-banquet.sorting-hat';
@@ -51,7 +52,7 @@ const ALMOST_THERE_SORTING_HAT_FRAGMENT_SOURCE =
 const RANDOM_SORTING_HAT_FRAGMENT_SOURCES = SORTING_HAT_FRAGMENT_SOURCES.filter(
     (source) => source !== ALMOST_THERE_SORTING_HAT_FRAGMENT_SOURCE
 );
-const SORTING_QUESTION_COUNT = 1;
+const SORTING_QUESTION_COUNT = 10;
 const SORTING_HAT_FRAGMENT_HISTORY_LIMIT = SORTING_HAT_FRAGMENT_SOURCES.length;
 const QUESTION_TRANSITION_MS = 720;
 const SORTING_UI_DELAY_MS = 240;
@@ -686,6 +687,7 @@ function initSortingQuiz() {
     let scores = createEmptyScores();
     let questions = [];
     let hasSentResult = false;
+    let sortingResultPromise = Promise.resolve();
     let isTransitioning = false;
     let hasStarted = false;
     let currentGuestName = '';
@@ -938,6 +940,31 @@ function initSortingQuiz() {
         });
     }
 
+    // The cabin guard needs the saved house, so wait for the save before leaving.
+    async function navigateToCabinAfterSave() {
+        await sortingResultPromise;
+        window.location.href = getPageUrl('cabin');
+    }
+
+    async function saveSortingResult(payload) {
+        try {
+            await sendSortingHouseResult(payload);
+        } catch (error) {
+            if (isApiError(error, 409) || isApiError(error, 404)) {
+                // House already set (or unknown guest): continue from the actual state.
+                const latestGuest = await getGuest({ refresh: true }).catch(() => null);
+                redirectToPage(getNextStep(latestGuest));
+                return new Promise(() => {});
+            }
+
+            // One retry for flaky connections.
+            await new Promise((resolve) => window.setTimeout(resolve, 1000));
+            await sendSortingHouseResult(payload).catch((retryError) => {
+                console.warn('Could not save the sorting result.', retryError);
+            });
+        }
+    }
+
     function handleChamberButtonClick() {
         if (chamberNavigationLocked) {
             return;
@@ -948,7 +975,7 @@ function initSortingQuiz() {
         const bodyEl = document.querySelector('body');
 
         if (!(bodyEl instanceof HTMLElement)) {
-            window.location.href = './cabin';
+            void navigateToCabinAfterSave();
             return;
         }
 
@@ -965,7 +992,7 @@ function initSortingQuiz() {
         });
 
         window.setTimeout(() => {
-            window.location.href = './cabin';
+            void navigateToCabinAfterSave();
         }, 1050);
     }
 
@@ -1102,7 +1129,7 @@ function initSortingQuiz() {
             if (!hasSentResult) {
                 hasSentResult = true;
 
-                void sendSortingHouseResult({
+                sortingResultPromise = saveSortingResult({
                     guestName: currentGuestName,
                     house,
                     scores: { ...scores },
@@ -1382,7 +1409,18 @@ function initSortingQuiz() {
     attemptAutoStartSortingFlow();
 }
 
-document.addEventListener('DOMContentLoaded', initSortingQuiz);
+async function bootstrapSortingPage() {
+    const guest = await guardPage('sorting');
+
+    if (!guest) {
+        return;
+    }
+
+    await whenDomReady();
+    initSortingQuiz();
+}
+
+void bootstrapSortingPage();
 
 window.showSortingHatSubtitleForSource = showSortingHatSubtitleForSource;
 window.clearSortingHatSubtitle = clearSortingHatSubtitleForSource;

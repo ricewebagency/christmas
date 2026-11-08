@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="nl">
+
+<head>
+    <base href="../">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Christmas at the Great Hall | Beheer</title>
+    <link rel="icon" href="./favicon.ico">
+    <link rel="stylesheet" href="./css/main.css">
+    <script type="module" src="./js/manage.js"></script>
+</head>
+
+<body class="min-h-dvh bg-neutral-950 font-sans text-sm text-neutral-200 antialiased" data-asset-base-path="../">
+    <div aria-hidden="true" class="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[60vh] bg-[radial-gradient(ellipse_at_top,rgba(198,164,90,0.12),transparent_65%)]"></div>
+    <header class="sticky top-0 z-20 border-b border-neutral-800/80 bg-neutral-950/80 shadow-[0_1px_0_rgba(198,164,90,0.08)] backdrop-blur-xl">
+        <div aria-hidden="true" class="h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent"></div>
+        <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+            <div class="flex min-w-0 items-center gap-3">
+                <img src="./favicon.ico" alt="" class="h-9 w-9 shrink-0 rounded-lg object-contain">
+                <h1 class="truncate text-base font-semibold text-neutral-100">Admin Panel</h1>
+            </div>
+
+            <div class="ml-auto flex items-center gap-2">
+                <p id="manage-sync" class="mr-2 hidden items-center gap-2 text-xs text-neutral-500 sm:flex" aria-live="polite">
+                    <span id="manage-sync-dot" class="h-1.5 w-1.5 rounded-full bg-neutral-600"></span>
+                    <span id="manage-sync-text">Nog niet geladen</span>
+                </p>
+                <span aria-hidden="true" class="mr-1 hidden h-6 w-px bg-neutral-800 sm:block"></span>
+                <button id="manage-refresh" type="button" title="Vernieuwen" aria-label="Vernieuwen"
+                    class="group inline-flex h-9 items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-800 hover:text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60 md:px-3">
+                    <svg class="h-4 w-4 transition-transform duration-500 group-hover:rotate-180 group-disabled:animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
+                        <path d="M21 3v5h-5" />
+                    </svg>
+                    <span class="hidden text-xs font-medium md:inline">Vernieuwen</span>
+                </button>
+                <button id="manage-settings-toggle" type="button" title="Instellingen" aria-label="Instellingen" aria-expanded="false" aria-controls="manage-settings"
+                    class="group inline-flex h-9 items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-800 hover:text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-expanded:border-accent/50 aria-expanded:bg-accent/10 aria-expanded:text-accent md:px-3">
+                    <svg class="h-4 w-4 transition-transform duration-700 group-hover:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span class="hidden text-xs font-medium md:inline">Instellingen</span>
+                </button>
+            </div>
+        </div>
+        <div class="relative mx-auto max-w-7xl">
+            <form id="manage-settings" autocomplete="off" class="absolute right-4 top-full mt-2 hidden w-[min(28rem,calc(100vw-2rem))] space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 shadow-2xl shadow-black/50 motion-safe:animate-fadeInDown">
+                <h2 class="font-semibold text-neutral-100">Instellingen</h2>
+                <div class="grid gap-3">
+                    <label class="block">
+                        <span class="mb-1 block text-xs text-neutral-400">API base URL</span>
+                        <input id="manage-base-url" type="url" name="manage-api-url" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other" placeholder="https://<function-app>.azurewebsites.net"
+                            class="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block text-xs text-neutral-400">Function key (lokaal niet nodig)</span>
+                        <input id="manage-key" type="text" name="manage-function-key" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"
+                            class="w-full rounded-md [-webkit-text-security:disc] border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                    </label>
+                </div>
+                <p class="text-xs text-neutral-500">Opgeslagen in localStorage van deze browser.</p>
+                <div class="flex gap-2">
+                    <button type="submit" class="rounded-md bg-accent px-3 py-2 font-semibold text-neutral-950 transition hover:bg-amber-300 active:scale-95">Opslaan en laden</button>
+                    <button id="manage-settings-clear" type="button" class="rounded-md border border-neutral-700 px-3 py-2 hover:border-red-500 hover:text-red-400">Wissen</button>
+                </div>
+            </form>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl space-y-6 px-4 py-6">
+        <div id="manage-message" class="pointer-events-none fixed inset-x-4 top-20 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-4 sm:items-end" role="status" aria-live="polite"></div>
+
+        <section aria-label="Totalen">
+            <div id="manage-totals" class="flex flex-wrap gap-2"></div>
+        </section>
+
+        <section aria-labelledby="manage-guests-title" class="rounded-lg border border-neutral-800 bg-neutral-900 motion-safe:animate-fadeInUp200">
+            <div class="flex flex-wrap items-end gap-3 border-b border-neutral-800 p-4">
+                <h2 id="manage-guests-title" class="mr-auto font-semibold text-neutral-100">Gasten <span id="manage-guest-count" class="font-normal text-neutral-500"></span></h2>
+                <label class="block">
+                    <span class="mb-1 block text-xs text-neutral-400">Zoeken</span>
+                    <input id="manage-search" type="search" placeholder="Naam, code of gerecht"
+                        class="w-56 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                </label>
+                <label class="block">
+                    <span class="mb-1 block text-xs text-neutral-400">RSVP</span>
+                    <select id="manage-filter-rsvp" class="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                        <option value="">Alle</option>
+                        <option value="accepted">Aanwezig</option>
+                        <option value="declined">Afgemeld</option>
+                        <option value="pending">Open</option>
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="mb-1 block text-xs text-neutral-400">Huis</span>
+                    <select id="manage-filter-house" class="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                        <option value="">Alle</option>
+                        <option value="gryffindor">Gryffindor</option>
+                        <option value="hufflepuff">Hufflepuff</option>
+                        <option value="ravenclaw">Ravenclaw</option>
+                        <option value="slytherin">Slytherin</option>
+                        <option value="none">Niet gesorteerd</option>
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="mb-1 block text-xs text-neutral-400">Gerechten</span>
+                    <select id="manage-filter-dishes" class="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                        <option value="">Alle</option>
+                        <option value="chosen">Gekozen</option>
+                        <option value="missing">Nog niet gekozen</option>
+                    </select>
+                </label>
+                <div class="flex items-end gap-1">
+                    <label class="block">
+                        <span class="mb-1 block text-xs text-neutral-400">Sorteren</span>
+                        <select id="manage-sort-key" class="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 focus:border-accent focus:outline-none">
+                            <option value="guestName">Naam</option>
+                            <option value="code">Code</option>
+                            <option value="rsvpStatus">RSVP</option>
+                            <option value="house">Huis</option>
+                            <option value="dishCount">Aantal gerechten</option>
+                            <option value="rsvpUpdatedAt">RSVP op</option>
+                            <option value="sortedAt">Gesorteerd op</option>
+                            <option value="dishesUpdatedAt">Gerechten op</option>
+                            <option value="createdAt">Aangemaakt</option>
+                        </select>
+                    </label>
+                    <button id="manage-sort-dir" type="button" title="Sorteerrichting" aria-label="Sorteerrichting"
+                        class="rounded-md border border-neutral-700 px-3 py-2 transition hover:border-accent hover:text-accent active:scale-90">▲</button>
+                </div>
+            </div>
+            <div id="manage-guest-list" class="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+        </section>
+
+        <div class="grid gap-6 lg:grid-cols-2 motion-safe:animate-fadeInUp400">
+            <section aria-labelledby="manage-create-title" class="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <h2 id="manage-create-title" class="font-semibold text-neutral-100">Gasten toevoegen</h2>
+                <form id="manage-create" class="space-y-3">
+                    <div class="grid grid-cols-[1fr_6rem_2rem] gap-2 text-xs text-neutral-400">
+                        <span>Volledige naam</span>
+                        <span>Pincode</span>
+                        <span></span>
+                    </div>
+                    <div id="manage-create-rows" class="space-y-2"></div>
+                    <p class="text-xs text-neutral-500">Pincode leeg laten = automatisch. Enter in pincode voegt een nieuwe rij toe.</p>
+                    <div class="flex gap-2">
+                        <button id="manage-create-add" type="button" class="rounded-md border border-neutral-700 px-3 py-2 hover:border-accent hover:text-accent">+ Gast</button>
+                        <button type="submit" class="rounded-md bg-accent px-3 py-2 font-semibold text-neutral-950 transition hover:bg-amber-300 active:scale-95 disabled:opacity-50">Toevoegen</button>
+                    </div>
+                </form>
+                <div id="manage-create-result" class="hidden space-y-2 motion-safe:animate-fadeInUpFast">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs uppercase tracking-wide text-neutral-400">Aangemaakt</h3>
+                        <button id="manage-create-copy" type="button" class="rounded-md border border-neutral-700 px-2 py-1 text-xs hover:border-accent hover:text-accent">Alles kopiëren</button>
+                    </div>
+                    <ul id="manage-create-list" class="divide-y divide-neutral-800 rounded-md border border-neutral-800"></ul>
+                </div>
+            </section>
+
+            <section aria-labelledby="manage-dishes-title" class="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 id="manage-dishes-title" class="font-semibold text-neutral-100">Gerechten</h2>
+                    <button id="manage-dishes-edit" type="button"
+                        class="hidden rounded-md border border-neutral-700 px-2 py-1 text-xs hover:border-accent hover:text-accent">Menu bewerken</button>
+                </div>
+                <div id="manage-dishes" class="space-y-4"></div>
+            </section>
+        </div>
+    </main>
+</body>
+
+</html>

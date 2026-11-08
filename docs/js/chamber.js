@@ -1,3 +1,5 @@
+import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js';
+
 const BASILISK_FRAME_SOURCES = [
     './assets/images/chamber/basilisk-stale-1.png',
     './assets/images/chamber/basilisk-stale-2.png',
@@ -72,9 +74,8 @@ const PHOENIX_FRAME_SOURCES = [
     './assets/images/chamber/phoenix-3.png',
     './assets/images/chamber/phoenix-4.png'
 ];
-const CABIN_STORAGE_KEY = 'magical-winter-banquet.cabin';
-const CABIN_COOKIE_NAME = 'magical-winter-banquet.cabin';
 const CABIN_DEPARTMENTS = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
+const CABIN_DEFAULT_DEPARTMENT = 'ravenclaw';
 const STAFF_SOURCE_BY_DEPARTMENT = {
     gryffindor: './assets/images/chamber/staff-gryffindor.png',
     hufflepuff: './assets/images/chamber/staff-hufflepuff.png',
@@ -159,45 +160,6 @@ function normalizeDepartment(value) {
     }
 
     return null;
-}
-
-function readCabinCookie() {
-    if (typeof document === 'undefined') {
-        return null;
-    }
-
-    const cookies = document.cookie ? document.cookie.split('; ') : [];
-    const matchingCookie = cookies.find((cookie) => cookie.startsWith(`${CABIN_COOKIE_NAME}=`));
-
-    if (!matchingCookie) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(decodeURIComponent(matchingCookie.split('=').slice(1).join('=')));
-    } catch {
-        return null;
-    }
-}
-
-function readStoredCabinDepartment() {
-    try {
-        const cachedValue = window.localStorage.getItem(CABIN_STORAGE_KEY);
-
-        if (cachedValue) {
-            const parsedCache = JSON.parse(cachedValue);
-            const cacheDepartment = normalizeDepartment(parsedCache?.department ?? parsedCache?.house);
-
-            if (cacheDepartment) {
-                return cacheDepartment;
-            }
-        }
-    } catch {
-        // Ignore cache parsing issues and continue to cookie fallback.
-    }
-
-    const cookieValue = readCabinCookie();
-    return normalizeDepartment(cookieValue?.department ?? cookieValue?.house);
 }
 
 function preloadImage(source) {
@@ -497,11 +459,11 @@ function createBasiliskChatbox(continueLabel, textContent = '') {
     const text = document.createElement('p');
 
     chatbox.setAttribute('aria-hidden', 'true');
-    chatbox.className = "pointer-events-none fixed bottom-8 left-1/2 z-[8] flex h-[clamp(9.5rem,19vw,13rem)] w-[min(92vw,72rem)] -translate-x-1/2 items-start justify-start bg-[url('../assets/images/chatbox.png')] bg-contain bg-center bg-no-repeat px-[clamp(1.25rem,2.5vw,2.75rem)] pt-[clamp(2.95rem,5vw,4.75rem)] pb-[clamp(2.2rem,3vw,3rem)] opacity-0 transition-opacity ease-out";
+    chatbox.className = "pointer-events-none fixed bottom-8 left-1/2 z-[8] flex aspect-[2157/524] min-h-[7.5rem] w-[min(92vw,54rem)] -translate-x-1/2 items-start justify-start bg-[url('../assets/images/chatbox.png')] bg-[length:100%_100%] bg-center bg-no-repeat px-[max(5.5cqw,1.125rem)] pt-[max(6cqw,1.25rem)] [container-type:inline-size] opacity-0 transition-opacity ease-out";
     chatbox.style.transitionDuration = `${BASILISK_FADE_IN_MS}ms`;
     chatbox.style.pointerEvents = 'auto';
 
-    text.className = 'max-w-[72ch] self-start text-left font-inkpot text-base leading-relaxed tracking-wide text-[#3a2413] drop-shadow-[0_1px_0_rgba(255,244,223,0.35)]';
+    text.className = 'max-w-[72ch] self-start text-left font-inkpot text-[length:clamp(0.9375rem,2.6cqw,1.125rem)] leading-snug tracking-wide text-[#3a2413] drop-shadow-[0_1px_0_rgba(255,244,223,0.35)]';
     text.textContent = textContent;
     chatbox.appendChild(text);
     chatbox.appendChild(continueLabel);
@@ -514,11 +476,11 @@ function createBasiliskContinueLabel(labelText = '') {
 
     label.type = 'button';
     label.setAttribute('aria-label', 'Continue basilisk dialogue');
-    label.className = 'pointer-events-none absolute bottom-10 right-5 z-[6] opacity-0 transition-opacity ease-out';
+    label.className = 'pointer-events-none absolute bottom-[max(4.5cqw,0.875rem)] right-[max(5.5cqw,1.125rem)] z-[6] opacity-0 transition-opacity ease-out';
     label.style.transitionDuration = `${BASILISK_FADE_IN_MS}ms`;
     label.style.pointerEvents = 'none';
     label.textContent = labelText;
-    label.classList.add('font-inkpot', 'text-sm', 'tracking-wide', 'text-black/85', 'drop-shadow-[0_1px_0_rgba(255,255,255,0.18)]');
+    label.classList.add('font-inkpot', 'text-[length:clamp(0.8125rem,2.2cqw,1rem)]', 'leading-tight', 'tracking-wide', 'text-black/85', 'drop-shadow-[0_1px_0_rgba(255,255,255,0.18)]');
 
     return label;
 }
@@ -1074,7 +1036,7 @@ function fadeOutBodyAndNavigateToMap() {
     const bodyElement = document.body;
 
     if (!(bodyElement instanceof HTMLElement)) {
-        window.location.href = './map';
+        window.location.href = getPageUrl('map');
         return;
     }
 
@@ -1091,7 +1053,7 @@ function fadeOutBodyAndNavigateToMap() {
     });
 
     window.setTimeout(() => {
-        window.location.href = './map';
+        window.location.href = getPageUrl('map');
     }, CHAMBER_MAP_REDIRECT_DELAY_MS);
 }
 
@@ -1143,7 +1105,7 @@ function startBasiliskSequence(layer, backdrop, chatbox, continueLabel, onContin
     };
 }
 
-async function initChamberScene() {
+async function initChamberScene(guest) {
     const body = document.body;
 
     if (!(body instanceof HTMLElement)) {
@@ -1169,7 +1131,7 @@ async function initChamberScene() {
     }
 
     const firstDialogue = getDialogueEntry(encounterDialogues, 0);
-    const cabinDepartment = readStoredCabinDepartment();
+    const cabinDepartment = normalizeDepartment(guest?.house) ?? CABIN_DEFAULT_DEPARTMENT;
     const basiliskLayer = createBasiliskLayer();
     const basiliskBackdrop = createBasiliskBackdrop();
     const basiliskStaffLayer = createBasiliskStaffLayer();
@@ -1378,10 +1340,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }, { once: true });
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        void initChamberScene();
-    }, { once: true });
-} else {
-    void initChamberScene();
+async function bootstrapChamberPage() {
+    const guest = await guardPage('chamber');
+
+    if (!guest) {
+        return;
+    }
+
+    await whenDomReady();
+    void initChamberScene(guest);
 }
+
+void bootstrapChamberPage();

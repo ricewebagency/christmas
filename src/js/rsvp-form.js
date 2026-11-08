@@ -1,4 +1,14 @@
-import { getInvitationData, sendAttendanceResponse } from './api-client.js';
+import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js';
+import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js';
+
+const ATTENDANCE_CHOICE_MAP = {
+    yes: 'accepted',
+    no: 'declined',
+    accepted: 'accepted',
+    declined: 'declined'
+};
+
+const RSVP_ERROR_MESSAGE = 'The owl could not deliver your letter, please try again.';
 
 function getRandomExitDelayMs() {
     const delayOptionsMs = [400, 800, 1200, 1600, 2000];
@@ -37,20 +47,16 @@ async function playRevealExitSequence(root = document) {
     await wait(maxDelayMs + animationDurationMs);
 }
 
-async function populateGuestName() {
+function populateGuestName(guest) {
     const guestNameEl = document.getElementById('guest-name');
-    if (!guestNameEl) {
-        return;
-    }
 
-    try {
-        const invitation = await getInvitationData();
-        if (invitation && invitation.guestName) {
-            guestNameEl.textContent = invitation.guestName;
-        }
-    } catch {
-        // Keep fallback text when API data is unavailable.
+    if (guestNameEl && guest?.guestName) {
+        guestNameEl.textContent = guest.guestName;
     }
+}
+
+function toAttendanceStatus(value) {
+    return ATTENDANCE_CHOICE_MAP[String(value ?? '').trim().toLowerCase()] ?? null;
 }
 
 function initDishSelectionLimit() {
@@ -86,7 +92,7 @@ function initDishSelectionLimit() {
     updateCheckboxState();
 }
 
-function initRsvpFormSubmission() {
+function initRsvpFormSubmission(guest) {
     const form = document.querySelector('form');
     if (!form) {
         return;
@@ -97,7 +103,15 @@ function initRsvpFormSubmission() {
     const submitButton = form.querySelector('button[type="submit"]');
     const rsvpRoot = document.getElementById('rsvp-root') || document;
     const burntPaper = document.querySelector('.burnt-paper-fade-out');
+    const errorEl = document.querySelector('[data-rsvp-error]');
     let isSubmitting = false;
+
+    const setError = (message) => {
+        if (errorEl instanceof HTMLElement) {
+            errorEl.textContent = message;
+            errorEl.classList.toggle('hidden', !message);
+        }
+    };
 
     const setChoiceSubmittingState = () => {
         // Keep the selected and unselected choice states unchanged while submitting.
@@ -118,6 +132,16 @@ function initRsvpFormSubmission() {
             activeChoice.classList.add('text-black');
         }
     };
+
+    // When changing an earlier answer, start from the current choice.
+    if (isEditMode() && guest.rsvpStatus !== 'pending') {
+        const currentChoice = choiceButtons.find((button) => toAttendanceStatus(button.dataset.attendanceChoice) === guest.rsvpStatus);
+
+        if (currentChoice && responseInput instanceof HTMLInputElement) {
+            responseInput.value = currentChoice.dataset.attendanceChoice || '';
+            setActiveChoice(currentChoice);
+        }
+    }
 
     choiceButtons.forEach((button) => {
         button.addEventListener('click', () => {
@@ -141,7 +165,7 @@ function initRsvpFormSubmission() {
             return;
         }
 
-        const attendanceResponse = responseInput.value.trim();
+        const attendanceResponse = toAttendanceStatus(responseInput.value);
         if (!attendanceResponse) {
             if (choiceButtons[0] instanceof HTMLButtonElement) {
                 choiceButtons[0].focus();
@@ -157,6 +181,7 @@ function initRsvpFormSubmission() {
 
         isSubmitting = true;
         setChoiceSubmittingState();
+        setError('');
 
         choiceButtons.forEach((button) => {
             button.disabled = true;
@@ -169,9 +194,17 @@ function initRsvpFormSubmission() {
 
         try {
             await playRevealExitSequence(rsvpRoot);
-            await sendAttendanceResponse(attendanceResponse);
-            window.location.assign('./sorting/');
-        } catch {
+            const updatedGuest = await sendAttendanceResponse(attendanceResponse);
+            redirectToPage(getNextStep(updatedGuest));
+        } catch (error) {
+            if (isApiError(error, 403) || isApiError(error, 404)) {
+                // Sealed after the deadline (or unknown guest): continue from the actual state.
+                const latestGuest = await getGuest({ refresh: true }).catch(() => null);
+                redirectToPage(getNextStep(latestGuest));
+                return;
+            }
+
+            setError(RSVP_ERROR_MESSAGE);
             isSubmitting = false;
             setChoiceSubmittingState();
             if (burntPaper) {
@@ -190,8 +223,17 @@ function initRsvpFormSubmission() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    void populateGuestName();
+async function bootstrapRsvpPage() {
+    const guest = await guardPage('rsvp');
+
+    if (!guest) {
+        return;
+    }
+
+    await whenDomReady();
+    populateGuestName(guest);
     initDishSelectionLimit();
-    initRsvpFormSubmission();
-});
+    initRsvpFormSubmission(guest);
+}
+
+void bootstrapRsvpPage();

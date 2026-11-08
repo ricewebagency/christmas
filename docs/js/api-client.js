@@ -1,292 +1,540 @@
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js';
+import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js';
 
-const mockInvitation = {
-    guestName: "Maurice van Dorst",
-    eventDate: "2026-12-24T18:00:00",
-    location: "Assendelft",
-    department: "ravenclaw",
-    rsvpStatus: "pending"
-};
+// Empty = mock mode (state in localStorage). Example: 'https://<function-app>.azurewebsites.net'.
+export const API_BASE_URL = 'https://magicalwinterbanquetapi20261108231610-btbjadbzavbybubk.westeurope-01.azurewebsites.net';
 
-const mockSortingResultStore = {
-    lastResult: null
-};
-
-const mockCabinDishSelectionStore = {
-    lastSelection: null
-};
-
+const GUEST_CODE_STORAGE_KEY = 'magical-winter-banquet.guest-code';
+const GUEST_CODE_PATTERN = /^[0-9]{4}$/;
+const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
+const RSVP_STATUSES = ['pending', 'accepted', 'declined'];
+const DISH_SELECTION_LIMIT = 4;
 const DISH_CATALOG_URL = new URL('../assets/files/dishes.json', import.meta.url);
 
-async function getRandomTakenDishIdsFromCatalog(count = 3) {
-    const targetCount = Number.isInteger(count) ? Math.max(1, count) : 3;
+export class ApiError extends Error {
+    constructor(status, code, message, details = {}) {
+        super(message || code);
+        this.name = 'ApiError';
+        this.status = status;
+        this.code = code;
+        this.retryAfterSeconds = details.retryAfterSeconds ?? null;
+        this.takenDishIds = details.takenDishIds ?? [];
+    }
+}
+
+export function isApiError(error, status = null) {
+    return error instanceof ApiError && (status === null || error.status === status);
+}
+
+// ---------- Guest code ----------
+
+export function normalizeGuestCode(value) {
+    const code = String(value ?? '').replace(/\s+/g, '');
+    return GUEST_CODE_PATTERN.test(code) ? code : null;
+}
+
+export function getStoredGuestCode() {
+    return normalizeGuestCode(readJsonFromLocalStorage(GUEST_CODE_STORAGE_KEY, null));
+}
+
+export function setGuestCode(code) {
+    const normalizedCode = normalizeGuestCode(code);
+
+    if (normalizedCode) {
+        writeJsonToLocalStorage(GUEST_CODE_STORAGE_KEY, normalizedCode);
+    }
+
+    return normalizedCode;
+}
+
+export function clearGuestCode() {
+    removeLocalStorageItem(GUEST_CODE_STORAGE_KEY);
+    guestPromise = null;
+}
+
+// Raw ?code value (may be invalid), or null when absent.
+export function readGuestCodeFromUrl() {
+    const value = new URLSearchParams(window.location.search).get('code');
+    return value === null ? null : value;
+}
+
+export function removeGuestCodeFromUrl() {
+    const url = new URL(window.location.href);
+
+    if (!url.searchParams.has('code')) {
+        return;
+    }
+
+    url.searchParams.delete('code');
+    window.history.replaceState(window.history.state, '', url.href);
+}
+
+// ---------- Normalization ----------
+
+function normalizeHouse(value) {
+    const house = String(value ?? '').trim().toLowerCase();
+    return HOUSES.includes(house) ? house : null;
+}
+
+function normalizeRsvpStatus(value) {
+    const status = String(value ?? '').trim().toLowerCase();
+
+    if (status === 'yes') {
+        return 'accepted';
+    }
+
+    if (status === 'no') {
+        return 'declined';
+    }
+
+    return RSVP_STATUSES.includes(status) ? status : null;
+}
+
+function normalizeDishIds(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return Array.from(new Set(
+        value
+            .map((item) => String(item ?? '').trim())
+            .filter((item) => item.length > 0)
+    ));
+}
+
+function normalizeGuestState(data = {}) {
+    const house = normalizeHouse(data.house);
+
+    return {
+        code: normalizeGuestCode(data.code),
+        guestName: String(data.guestName ?? '').trim() || 'Guest',
+        eventDate: data.eventDate ?? null,
+        location: data.location ?? '',
+        rsvpStatus: normalizeRsvpStatus(data.rsvpStatus) ?? 'pending',
+        house,
+        department: house,
+        dishIds: normalizeDishIds(data.dishIds),
+        changeDeadline: data.changeDeadline ?? null,
+        canChange: Boolean(data.canChange)
+    };
+}
+
+function getCabinImageForHouse(house) {
+    return `./assets/images/hogwarts-express-cabin-front-${normalizeHouse(house) ?? 'gryffindor'}.png`;
+}
+
+// ---------- HTTP ----------
+
+async function request(method, path, body) {
+    let response;
 
     try {
-        const response = await fetch(DISH_CATALOG_URL, {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+            method,
+            headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+            body: body === undefined ? undefined : JSON.stringify(body),
             cache: 'no-store'
         });
+    } catch {
+        throw new ApiError(0, 'network_error', 'The owls could not reach the castle.');
+    }
 
-        if (!response.ok) {
-            throw new Error(`Failed to load dishes catalog: ${response.status}`);
+    let data = null;
+
+    try {
+        data = await response.json();
+    } catch {
+        data = null;
+    }
+
+    if (!response.ok) {
+        const retryAfterHeader = Number(response.headers.get('Retry-After'));
+        const retryAfterSeconds = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+            ? retryAfterHeader
+            : Number(data?.retryAfterSeconds) || null;
+
+        throw new ApiError(response.status, data?.error || 'http_error', data?.message || `Request failed: ${response.status}`, {
+            retryAfterSeconds,
+            takenDishIds: normalizeDishIds(data?.takenDishIds)
+        });
+    }
+
+    return data;
+}
+
+function requireGuestCode() {
+    const code = getStoredGuestCode();
+
+    if (!code) {
+        throw new ApiError(401, 'missing_guest_code', 'No guest code is known.');
+    }
+
+    return code;
+}
+
+const backend = {
+    getGuest: (code) => request('GET', `/api/guests/${encodeURIComponent(code)}`),
+    putRsvp: (code, rsvpStatus) => request('PUT', `/api/guests/${encodeURIComponent(code)}/rsvp`, { rsvpStatus }),
+    putSorting: (code, payload) => request('PUT', `/api/guests/${encodeURIComponent(code)}/sorting`, payload),
+    putDishes: (code, dishIds) => request('PUT', `/api/guests/${encodeURIComponent(code)}/dishes`, { dishIds }),
+    getTakenDishes: (code) => request('GET', `/api/guests/${encodeURIComponent(code)}/dishes/taken`),
+    getDishes: () => request('GET', '/api/dishes')
+};
+
+function getBackend() {
+    return API_BASE_URL ? backend : mockBackend;
+}
+
+// ---------- Guest state (cached per page load) ----------
+
+let guestPromise = null;
+
+function cacheGuest(data) {
+    const guest = normalizeGuestState(data);
+    guestPromise = Promise.resolve(guest);
+    return guest;
+}
+
+export async function verifyGuestCode(code) {
+    const normalizedCode = String(code ?? '').replace(/\s+/g, '');
+    const data = await getBackend().getGuest(normalizedCode);
+    setGuestCode(normalizedCode);
+    return cacheGuest(data);
+}
+
+export function getGuest({ refresh = false } = {}) {
+    if (!guestPromise || refresh) {
+        const pending = (async () => {
+            const code = requireGuestCode();
+            return normalizeGuestState(await getBackend().getGuest(code));
+        })();
+
+        guestPromise = pending;
+        pending.catch(() => {
+            if (guestPromise === pending) {
+                guestPromise = null;
+            }
+        });
+    }
+
+    return guestPromise;
+}
+
+export async function sendAttendanceResponse(attendanceResponse) {
+    const rsvpStatus = normalizeRsvpStatus(attendanceResponse);
+
+    if (rsvpStatus !== 'accepted' && rsvpStatus !== 'declined') {
+        throw new Error('Attendance response must be accepted or declined.');
+    }
+
+    return cacheGuest(await getBackend().putRsvp(requireGuestCode(), rsvpStatus));
+}
+
+export async function sendSortingHouseResult(result) {
+    const house = normalizeHouse(result?.house);
+
+    if (!house) {
+        throw new Error('Sorting house is required.');
+    }
+
+    return cacheGuest(await getBackend().putSorting(requireGuestCode(), {
+        house,
+        scores: { ...(result?.scores ?? {}) },
+        questionsAnswered: Number(result?.questionsAnswered ?? 0)
+    }));
+}
+
+export async function sendCabinDishSelection(payload) {
+    const dishIds = normalizeDishIds(payload?.dishIds ?? payload?.dishSelection ?? []).slice(0, DISH_SELECTION_LIMIT);
+
+    if (dishIds.length === 0) {
+        throw new Error('At least one dish selection is required.');
+    }
+
+    return cacheGuest(await getBackend().putDishes(requireGuestCode(), dishIds));
+}
+
+export async function fetchTakenCabinDishIds() {
+    const data = await getBackend().getTakenDishes(requireGuestCode());
+
+    return {
+        ok: true,
+        status: 200,
+        data: { dishIds: normalizeDishIds(data?.dishIds) }
+    };
+}
+
+async function loadStaticDishCatalog() {
+    const response = await fetch(DISH_CATALOG_URL, { cache: 'no-store' });
+
+    if (!response.ok) {
+        throw new Error(`Failed to load dishes catalog: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+}
+
+export async function fetchDishCatalog() {
+    if (API_BASE_URL) {
+        try {
+            const data = await backend.getDishes();
+
+            if (Array.isArray(data)) {
+                return { ok: true, status: 200, data };
+            }
+        } catch (error) {
+            console.warn('Falling back to the static dishes catalog.', error);
         }
+    }
 
-        const data = await response.json();
-        const dishEntries = Array.isArray(data) ? data : [];
-        const uniqueDishIds = Array.from(new Set(
-            dishEntries
-                .flatMap((course) => Array.isArray(course?.dishes) ? course.dishes : [])
-                .map((dish) => String(dish?.id ?? '').trim())
-                .filter((dishId) => dishId.length > 0)
-        ));
+    return { ok: true, status: 200, data: await loadStaticDishCatalog() };
+}
 
-        if (uniqueDishIds.length === 0) {
-            return ['1'];
+// ---------- Wrappers kept for existing pages ----------
+
+export async function getInvitationData() {
+    return getGuest();
+}
+
+export async function getCabinData() {
+    const guest = await getGuest();
+
+    return {
+        guestName: guest.guestName,
+        department: guest.house,
+        cabinFrontImage: getCabinImageForHouse(guest.house),
+        dishSelection: guest.dishIds
+    };
+}
+
+export async function fetchCabinDishSelection() {
+    const guest = await getGuest();
+
+    return {
+        ok: true,
+        status: 200,
+        data: {
+            guestName: guest.guestName,
+            department: guest.house,
+            dishIds: guest.dishIds
         }
+    };
+}
 
-        const shuffledDishIds = [...uniqueDishIds];
-        for (let index = shuffledDishIds.length - 1; index > 0; index -= 1) {
+// ---------- Mock backend (API_BASE_URL empty) ----------
+// Only pin 2412 exists. 5 wrong codes within an hour block for an hour (clear localStorage to reset).
+
+const MOCK_GUEST_STORAGE_KEY = 'magical-winter-banquet.mock-guest';
+const MOCK_ACCESS_STORAGE_KEY = 'magical-winter-banquet.mock-access-attempts';
+const MOCK_GUEST_CODE = '2412';
+const MOCK_EVENT = {
+    guestName: 'Maurice van Dorst',
+    eventDate: '2026-12-24T18:00:00+01:00',
+    location: 'Assendelft',
+    changeDeadline: '2026-12-17T23:59:59+01:00'
+};
+const MOCK_RATE_LIMIT = { maxFailedAttempts: 5, windowMs: 60 * 60 * 1000, blockMs: 60 * 60 * 1000 };
+const MOCK_LATENCY_MS = 150;
+
+function mockDelay() {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, MOCK_LATENCY_MS);
+    });
+}
+
+async function pickRandomCatalogDishIds(count) {
+    try {
+        const ids = (await loadStaticDishCatalog())
+            .flatMap((course) => (Array.isArray(course?.dishes) ? course.dishes : []))
+            .map((dish) => String(dish?.id ?? '').trim())
+            .filter((id) => id.length > 0);
+
+        for (let index = ids.length - 1; index > 0; index -= 1) {
             const randomIndex = Math.floor(Math.random() * (index + 1));
-            [shuffledDishIds[index], shuffledDishIds[randomIndex]] = [shuffledDishIds[randomIndex], shuffledDishIds[index]];
+            [ids[index], ids[randomIndex]] = [ids[randomIndex], ids[index]];
         }
 
-        return shuffledDishIds.slice(0, Math.min(targetCount, shuffledDishIds.length));
-    } catch (error) {
-        console.warn('Could not load the dishes catalog for the mock taken dish selection.', error);
+        return ids.slice(0, count);
+    } catch {
         return ['1'];
     }
 }
 
-const CABIN_STORAGE_KEY = 'magical-winter-banquet.cabin';
-const CABIN_COOKIE_NAME = 'magical-winter-banquet.cabin';
-const CABIN_DEPARTMENTS = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
-const CABIN_DISH_SELECTION_LIMIT = 4;
+async function readMockGuest() {
+    const stored = readJsonFromLocalStorage(MOCK_GUEST_STORAGE_KEY, null);
 
-function normalizeDishSelection(selection) {
-    if (!Array.isArray(selection)) {
-        return [];
+    if (stored && typeof stored === 'object') {
+        return stored;
     }
 
-    const sanitizedSelection = selection
-        .map((item) => String(item ?? '').trim())
-        .filter((item) => item.length > 0);
+    const initial = {
+        code: MOCK_GUEST_CODE,
+        guestName: MOCK_EVENT.guestName,
+        rsvpStatus: 'pending',
+        house: null,
+        sortingScores: null,
+        dishIds: [],
+        // Dishes claimed by other (imaginary) guests.
+        takenByOthers: await pickRandomCatalogDishIds(3)
+    };
 
-    return Array.from(new Set(sanitizedSelection)).slice(0, CABIN_DISH_SELECTION_LIMIT);
+    writeJsonToLocalStorage(MOCK_GUEST_STORAGE_KEY, initial);
+    return initial;
 }
 
-function normalizeDepartment(value) {
-    const normalizedDepartment = String(value ?? '').trim().toLowerCase();
-
-    if (CABIN_DEPARTMENTS.includes(normalizedDepartment)) {
-        return normalizedDepartment;
-    }
-
-    return 'ravenclaw';
+function writeMockGuest(guest) {
+    writeJsonToLocalStorage(MOCK_GUEST_STORAGE_KEY, guest);
 }
 
-function getCabinImageForDepartment(department) {
-    switch (normalizeDepartment(department)) {
-        case 'gryffindor':
-            return './assets/images/hogwarts-express-cabin-front-gryffindor.png';
-        case 'hufflepuff':
-            return './assets/images/hogwarts-express-cabin-front-hufflepuff.png';
-        case 'ravenclaw':
-            return './assets/images/hogwarts-express-cabin-front-ravenclaw.png';
-        case 'slytherin':
-            return './assets/images/hogwarts-express-cabin-front-slytherin.png';
-        default:
-            return './assets/images/hogwarts-express-cabin-front-gryffindor.png';
-    }
+function mockCanChange() {
+    return Date.now() < new Date(MOCK_EVENT.changeDeadline).getTime();
 }
 
-function normalizeCabinData(data = {}) {
-    const normalizedDepartment = normalizeDepartment(data.department ?? data.house);
-    const guestName = String(data.guestName ?? 'Guest').trim() || 'Guest';
-    const dishSelection = normalizeDishSelection(data.dishSelection);
-
+function toMockGuestState(guest) {
     return {
-        guestName,
-        department: normalizedDepartment,
-        cabinFrontImage: data.cabinFrontImage || getCabinImageForDepartment(normalizedDepartment),
-        dishSelection,
-        source: data.source || 'api'
+        code: guest.code,
+        guestName: guest.guestName,
+        eventDate: MOCK_EVENT.eventDate,
+        location: MOCK_EVENT.location,
+        rsvpStatus: guest.rsvpStatus,
+        house: guest.house,
+        dishIds: [...guest.dishIds],
+        changeDeadline: MOCK_EVENT.changeDeadline,
+        canChange: mockCanChange()
     };
 }
 
-function writeCabinCookie(value) {
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toUTCString();
-    document.cookie = `${CABIN_COOKIE_NAME}=${encodeURIComponent(value)}; expires=${expiresAt}; path=/; SameSite=Lax`;
+function readMockAccess() {
+    const stored = readJsonFromLocalStorage(MOCK_ACCESS_STORAGE_KEY, null);
+    return stored && typeof stored === 'object'
+        ? stored
+        : { failedCount: 0, windowStartedAt: 0, blockedUntil: 0 };
 }
 
-function readCabinCookie() {
-    if (typeof document === 'undefined') {
-        return null;
-    }
+function assertMockNotBlocked() {
+    const access = readMockAccess();
+    const remainingMs = access.blockedUntil - Date.now();
 
-    const cookies = document.cookie ? document.cookie.split('; ') : [];
-    const matchingCookie = cookies.find((cookie) => cookie.startsWith(`${CABIN_COOKIE_NAME}=`));
-
-    if (!matchingCookie) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(decodeURIComponent(matchingCookie.split('=').slice(1).join('=')));
-    } catch {
-        return null;
+    if (remainingMs > 0) {
+        throw new ApiError(429, 'too_many_attempts', 'Too many failed attempts.', {
+            retryAfterSeconds: Math.ceil(remainingMs / 1000)
+        });
     }
 }
 
-function readStoredCabinData() {
-    const cachedValue = readJsonFromLocalStorage(CABIN_STORAGE_KEY, null);
-    if (cachedValue && typeof cachedValue === 'object') {
-        return normalizeCabinData({ ...cachedValue, source: 'cache' });
+function registerMockFailedAttempt() {
+    const now = Date.now();
+    const access = readMockAccess();
+
+    if (now - access.windowStartedAt > MOCK_RATE_LIMIT.windowMs) {
+        access.failedCount = 0;
+        access.windowStartedAt = now;
     }
 
-    const cookieValue = readCabinCookie();
-    if (cookieValue && typeof cookieValue === 'object') {
-        return normalizeCabinData({ ...cookieValue, source: 'cookie' });
+    access.failedCount += 1;
+
+    if (access.failedCount >= MOCK_RATE_LIMIT.maxFailedAttempts) {
+        access.blockedUntil = now + MOCK_RATE_LIMIT.blockMs;
+        access.failedCount = 0;
+        access.windowStartedAt = now;
     }
 
-    return null;
+    writeJsonToLocalStorage(MOCK_ACCESS_STORAGE_KEY, access);
 }
 
-function persistCabinData(data) {
-    const normalizedData = normalizeCabinData({ ...data, source: data?.source || 'api' });
+async function loadMockGuestForCode(code) {
+    await mockDelay();
+    assertMockNotBlocked();
 
-    writeJsonToLocalStorage(CABIN_STORAGE_KEY, normalizedData);
-
-    writeCabinCookie(JSON.stringify(normalizedData));
-
-    return normalizedData;
-}
-
-export async function getInvitationData() {
-    // Keep this API shape stable so we can swap mock data for a real endpoint later.
-    return { ...mockInvitation };
-}
-
-export async function fetchCabinDataForGuest(guestName, departmentOverride = null) {
-    const normalizedGuestName = String(guestName ?? '').trim() || 'Guest';
-    const normalizedDepartment = normalizeDepartment(departmentOverride ?? mockInvitation.department ?? 'ravenclaw');
-
-    return {
-        guestName: normalizedGuestName,
-        department: normalizedDepartment,
-        cabinFrontImage: getCabinImageForDepartment(normalizedDepartment),
-        source: 'api'
-    };
-}
-
-export async function getCabinData() {
-    const storedCabinData = readStoredCabinData();
-    if (storedCabinData) {
-        return storedCabinData;
+    if (String(code ?? '').replace(/\s+/g, '') !== MOCK_GUEST_CODE) {
+        registerMockFailedAttempt();
+        throw new ApiError(404, 'guest_not_found', 'That password is not known to the castle.');
     }
 
-    const invitation = await getInvitationData();
-    const cabinData = await fetchCabinDataForGuest(
-        invitation?.guestName,
-        invitation?.department ?? invitation?.house ?? null
-    );
-
-    return persistCabinData(cabinData);
+    return readMockGuest();
 }
 
-export async function sendAttendanceResponse(attendanceResponse) {
-    const normalizedResponse = String(attendanceResponse ?? '').trim();
-
-    if (!normalizedResponse) {
-        throw new Error('Attendance response is required.');
+function assertMockChangeAllowed() {
+    if (!mockCanChange()) {
+        throw new ApiError(403, 'changes_locked', 'Your choices are sealed.');
     }
+}
 
-    // Mock API send behavior; keep contract stable for a future real endpoint.
-    mockInvitation.rsvpStatus = normalizedResponse;
+const mockBackend = {
+    async getGuest(code) {
+        return toMockGuestState(await loadMockGuestForCode(code));
+    },
 
-    return {
-        ok: true,
-        status: 200,
-        data: {
-            attendanceResponse: normalizedResponse
+    async putRsvp(code, rsvpStatus) {
+        const guest = await loadMockGuestForCode(code);
+        assertMockChangeAllowed();
+
+        guest.rsvpStatus = rsvpStatus;
+
+        if (rsvpStatus === 'declined') {
+            guest.dishIds = [];
         }
-    };
-}
 
-export async function sendSortingHouseResult(result) {
-    const normalizedHouse = normalizeDepartment(result?.house ?? "");
-    const normalizedGuestName = String(result?.guestName ?? '').trim() || mockInvitation.guestName || 'Guest';
+        writeMockGuest(guest);
+        return toMockGuestState(guest);
+    },
 
-    if (!result?.house && !normalizedHouse) {
-        throw new Error("Sorting house is required.");
-    }
+    async putSorting(code, payload) {
+        const guest = await loadMockGuestForCode(code);
 
-    const normalizedScores = { ...(result?.scores ?? {}) };
-    const savedResult = {
-        guestName: normalizedGuestName,
-        house: normalizedHouse,
-        scores: normalizedScores,
-        questionsAnswered: Number(result?.questionsAnswered ?? 0),
-        savedAt: new Date().toISOString()
-    };
-
-    mockInvitation.guestName = normalizedGuestName;
-    mockInvitation.department = normalizedHouse;
-    mockInvitation.rsvpStatus = mockInvitation.rsvpStatus || 'pending';
-    mockSortingResultStore.lastResult = savedResult;
-
-    persistCabinData({
-        guestName: normalizedGuestName,
-        department: normalizedHouse,
-        source: 'api'
-    });
-
-    return {
-        ok: true,
-        status: 200,
-        data: savedResult
-    };
-}
-
-export async function sendCabinDishSelection(payload) {
-    const dishSelection = normalizeDishSelection(payload?.dishSelection ?? payload?.dishIds ?? []);
-
-    if (dishSelection.length === 0) {
-        throw new Error('At least one dish selection is required.');
-    }
-
-    const cabinData = await getCabinData();
-    const savedSelection = {
-        guestName: cabinData.guestName,
-        dishSelection,
-        savedAt: new Date().toISOString()
-    };
-
-    mockCabinDishSelectionStore.lastSelection = savedSelection;
-
-    persistCabinData({
-        ...cabinData,
-        dishSelection,
-        source: 'api'
-    });
-
-    return {
-        ok: true,
-        status: 200,
-        data: savedSelection
-    };
-}
-
-export async function fetchTakenCabinDishIds() {
-    const dishIds = await getRandomTakenDishIdsFromCatalog(3);
-
-    return {
-        ok: true,
-        status: 200,
-        data: {
-            dishIds
+        if (guest.rsvpStatus !== 'accepted') {
+            throw new ApiError(409, 'rsvp_not_accepted', 'Only accepted guests can be sorted.');
         }
-    };
-}
+
+        if (guest.house && guest.house !== payload.house) {
+            throw new ApiError(409, 'house_already_set', 'The Sorting Hat has already spoken.');
+        }
+
+        if (!guest.house) {
+            guest.house = payload.house;
+            guest.sortingScores = payload.scores;
+            writeMockGuest(guest);
+        }
+
+        return toMockGuestState(guest);
+    },
+
+    async putDishes(code, dishIds) {
+        const guest = await loadMockGuestForCode(code);
+
+        if (guest.rsvpStatus !== 'accepted') {
+            throw new ApiError(409, 'rsvp_not_accepted', 'Only accepted guests can choose dishes.');
+        }
+
+        if (!guest.house) {
+            throw new ApiError(409, 'not_sorted', 'The Sorting Hat has not spoken yet.');
+        }
+
+        if (dishIds.length === 0 || dishIds.length > DISH_SELECTION_LIMIT) {
+            throw new ApiError(400, 'invalid_dishes', 'Choose between one and four dishes.');
+        }
+
+        if (guest.dishIds.length > 0) {
+            assertMockChangeAllowed();
+        }
+
+        const takenDishIds = dishIds.filter((dishId) => guest.takenByOthers.includes(dishId));
+
+        if (takenDishIds.length > 0) {
+            throw new ApiError(409, 'dishes_taken', 'Some dishes were claimed by another guest.', { takenDishIds });
+        }
+
+        guest.dishIds = [...dishIds];
+        writeMockGuest(guest);
+        return toMockGuestState(guest);
+    },
+
+    async getTakenDishes(code) {
+        const guest = await loadMockGuestForCode(code);
+        return { dishIds: guest.takenByOthers.filter((dishId) => !guest.dishIds.includes(dishId)) };
+    },
+
+    async getDishes() {
+        return loadStaticDishCatalog();
+    }
+};

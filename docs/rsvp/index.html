@@ -41,16 +41,17 @@
                 </p>
                 <form data-reveal style="--reveal-delay: 2900ms;" class="pt-1 space-y-4">
                     <div class="flex items-center gap-12 pt-1 pl-4 text-left text-lg sm:text-xl">
-                        <button type="button" data-attendance-choice="yes"
+                        <button type="button" data-attendance-choice="accepted"
                             class="attendance-choice appearance-none border-0 bg-transparent p-0 text-charcoal/85 opacity-45 transition-opacity duration-200 hover:opacity-100 focus:opacity-100 focus-visible:text-black focus:text-black active:text-black focus:outline-none focus-visible:outline-none">
                             Yes
                         </button>
-                        <button type="button" data-attendance-choice="no"
+                        <button type="button" data-attendance-choice="declined"
                             class="attendance-choice appearance-none border-0 bg-transparent p-0 text-charcoal/85 opacity-45 transition-opacity duration-200 hover:opacity-100 focus:opacity-100 focus-visible:text-black focus:text-black active:text-black focus:outline-none focus-visible:outline-none">
                             No
                         </button>
                     </div>
                     <input type="hidden" name="attendanceResponse" id="attendance-response" value="">
+                    <p data-rsvp-error role="alert" class="hidden text-sm italic text-red-900"></p>
                     <div class="flex justify-end pt-1 text-left">
                         <button type="submit"
                             class="group inline-flex items-center gap-2 text-sm text-charcoal/85 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:outline-none sm:text-base">

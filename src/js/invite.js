@@ -4,8 +4,7 @@ import {
     runRevealExitSequence,
     setupLinkExitTransition
 } from "./page-transitions.js";
-import { getInvitationData } from "./api-client.js";
-import { resetClientStorage } from "./storage-utils.js";
+import { getNextStep, getPageUrl, guardPage, whenDomReady } from "./guest-flow.js";
 
 const RSVP_LABELS = {
     pending: "Awaiting your response",
@@ -30,12 +29,6 @@ const ENVELOPE_TOP_FILTERS = {
 };
 
 const RSVP_EXIT_FADE_DURATION_MS = 800;
-const INVITE_RESET_LOCAL_STORAGE_KEYS = [
-    "magical-winter-banquet.sorting-hat",
-    "magical-winter-banquet.cabin",
-    "magical-winter-banquet.cabin-dish-selection"
-];
-const INVITE_RESET_COOKIE_NAMES = ["magical-winter-banquet.cabin"];
 
 function pad(value) {
     return String(value).padStart(2, "0");
@@ -226,26 +219,36 @@ function revealInvitationContent() {
     window.dispatchEvent(new CustomEvent("reveal-sequence:start"));
 }
 
+// Once the RSVP is answered, the letter's link continues the journey instead.
+function setupInviteCta(guest) {
+    if (guest.rsvpStatus === "pending") {
+        return;
+    }
+
+    const ctaLink = document.querySelector("[data-invite-cta]");
+    const ctaLabel = document.querySelector("[data-invite-cta-label]");
+
+    if (ctaLink instanceof HTMLAnchorElement) {
+        ctaLink.href = getPageUrl(getNextStep(guest));
+    }
+
+    if (ctaLabel instanceof HTMLElement) {
+        ctaLabel.textContent = "Continue your journey";
+    }
+}
+
 function setupRsvpExitTransition() {
     setupLinkExitTransition({
-        matchLink: (link) => pathEndsWith(link.getAttribute("href"), "/rsvp"),
+        matchLink: (link) => link.hasAttribute("data-invite-cta") || pathEndsWith(link.getAttribute("href"), "/rsvp"),
         getDelayMs: () => runRevealExitSequence({
             fadeDurationMs: RSVP_EXIT_FADE_DURATION_MS
         })
     });
 }
 
-function resetStorageOnInviteOpen() {
-    resetClientStorage({
-        localStorageKeys: INVITE_RESET_LOCAL_STORAGE_KEYS,
-        cookieNames: INVITE_RESET_COOKIE_NAMES
-    });
-}
-
-async function initInvitePage() {
+async function initInvitePage(data) {
     const invitationRoot = document.getElementById("invitation-root");
 
-    const data = await getInvitationData();
     renderInvitationData(data);
     startCountdown(data.eventDate);
     createSnowParticles();
@@ -262,9 +265,18 @@ async function initInvitePage() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    resetStorageOnInviteOpen();
+async function bootstrapInvitePage() {
+    const guest = await guardPage("invite");
+
+    if (!guest) {
+        return;
+    }
+
+    await whenDomReady();
     lockInitialViewportHeight();
+    setupInviteCta(guest);
     setupRsvpExitTransition();
-    void initInvitePage();
-});
+    void initInvitePage(guest);
+}
+
+void bootstrapInvitePage();
