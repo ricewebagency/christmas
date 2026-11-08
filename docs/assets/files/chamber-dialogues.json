@@ -6,13 +6,8 @@
       "dialogues": [
         {
           "id": 1,
-          "text": "Wow! You encounter the Basilisk upon entering the Chamber of Secrets..",
-          "readMore": "Click to continue..."
-        },
-        {
-          "id": 2,
-          "text": "The enormous serpent fixes its deadly gaze in your direction. You need to act fast!",
-          "readMore": "Draw your wand 🪄"
+          "text": "Wow! You encounter the Basilisk upon entering. Quickly, draw your wand!",
+          "readMore": "Click to draw 💥"
         }
       ]
     },
@@ -22,7 +17,7 @@
       "dialogues": [
         {
           "id": 4,
-          "text": "You raise your wand and begin to concentrate. Quickly, cast your spell now!",
+          "text": "You raise your wand and concentrate. Cast your spell now!",
           "readMore": "Click to cast 💥"
         }
       ]
@@ -33,13 +28,13 @@
       "dialogues": [
         {
           "id": 6,
-          "text": "The Basilisk seems badly hurt! You have a chance to strike the final blow.",
+          "text": "The Basilisk is badly hurt!",
           "readMore": "Click to continue..."
         },
         {
           "id": 7,
-          "text": "Focus all your magical energy, and unleash the final spell to defeat the Basilisk!",
-          "readMore": "Cast again 💥"
+          "text": "Quickly, cast again and defeat the Basilisk!",
+          "readMore": "Click to cast again 💥"
         }
       ]
     },
@@ -49,12 +44,12 @@
       "dialogues": [
         {
           "id": 8,
-          "text": "Well done! Your spell has worked perfectly. The Basilisk retreats into the depths of the chamber.",
+          "text": "Well done! Your spell has worked perfectly.",
           "readMore": "Click to continue..."
         },
         {
           "id": 9,
-          "text": "The Chamber of Secrets begins to glow with an ethereal light as peace returns.",
+          "text": "An ethereal light shines through the Chamber of Secrets.",
           "readMore": "Click to continue..."
         }
       ]
@@ -65,7 +60,7 @@
       "dialogues": [
         {
           "id": 10,
-          "text": "Hey! What's that? A Phoenix?",
+          "text": "Hey! What's that..? A Phoenix?",
           "readMore": "Click to continue..."
         }
       ]

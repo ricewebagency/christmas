@@ -797,8 +797,17 @@ video {
   margin-right: auto;
 }
 
+.my-8{
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
 .\!mt-16{
   margin-top: 4rem !important;
+}
+
+.ml-3{
+  margin-left: 0.75rem;
 }
 
 .mt-1{
@@ -811,6 +820,10 @@ video {
 
 .mt-4{
   margin-top: 1rem;
+}
+
+.mt-5{
+  margin-top: 1.25rem;
 }
 
 .mt-6{
@@ -916,6 +929,10 @@ video {
 
 .min-h-0{
   min-height: 0px;
+}
+
+.min-h-11{
+  min-height: 2.75rem;
 }
 
 .min-h-dvh{
@@ -1217,6 +1234,10 @@ video {
   gap: 1rem;
 }
 
+.gap-5{
+  gap: 1.25rem;
+}
+
 .gap-8{
   gap: 2rem;
 }
@@ -1300,12 +1321,29 @@ video {
   border-radius: 0px;
 }
 
+.rounded-sm{
+  border-radius: 0.125rem;
+}
+
 .border{
   border-width: 1px;
 }
 
 .border-0{
   border-width: 0px;
+}
+
+.border-y{
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.border-charcoal\/30{
+  border-color: rgb(43 43 43 / 0.3);
+}
+
+.border-charcoal\/60{
+  border-color: rgb(43 43 43 / 0.6);
 }
 
 .bg-\[\#1f1d1a\]{
@@ -1479,6 +1517,11 @@ video {
   padding-right: 1rem;
 }
 
+.px-5{
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
 .px-6{
   padding-left: 1.5rem;
   padding-right: 1.5rem;
@@ -1512,6 +1555,11 @@ video {
 .py-4{
   padding-top: 1rem;
   padding-bottom: 1rem;
+}
+
+.py-7{
+  padding-top: 1.75rem;
+  padding-bottom: 1.75rem;
 }
 
 .py-8{
@@ -1565,6 +1613,11 @@ video {
 
 .font-serif{
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.text-2xl{
+  font-size: 1.5rem;
+  line-height: 2rem;
 }
 
 .text-3xl{
@@ -1640,6 +1693,10 @@ video {
 
 .tracking-wide{
   letter-spacing: 0.025em;
+}
+
+.tracking-widest{
+  letter-spacing: 0.1em;
 }
 
 .text-\[\#1f1d1a\]{
@@ -1753,8 +1810,16 @@ video {
   text-decoration-color: rgb(31 29 26 / 0.45);
 }
 
+.decoration-charcoal\/40{
+  text-decoration-color: rgb(43 43 43 / 0.4);
+}
+
 .decoration-2{
   text-decoration-thickness: 2px;
+}
+
+.underline-offset-4{
+  text-underline-offset: 4px;
 }
 
 .antialiased{
@@ -2140,6 +2205,10 @@ body.audio-gate-visible #sorting-main {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
+.hover\:bg-charcoal\/10:hover{
+  background-color: rgb(43 43 43 / 0.1);
+}
+
 .hover\:text-\[\#0f0d0b\]:hover{
   --tw-text-opacity: 1;
   color: rgb(15 13 11 / var(--tw-text-opacity, 1));
@@ -2168,6 +2237,10 @@ body.audio-gate-visible #sorting-main {
 .hover\:text-charcoal:hover{
   --tw-text-opacity: 1;
   color: rgb(43 43 43 / var(--tw-text-opacity, 1));
+}
+
+.hover\:decoration-charcoal:hover{
+  text-decoration-color: #2B2B2B;
 }
 
 .hover\:opacity-100:hover{
@@ -2208,6 +2281,22 @@ body.audio-gate-visible #sorting-main {
 .focus-visible\:outline-none:focus-visible{
   outline: 2px solid transparent;
   outline-offset: 2px;
+}
+
+.focus-visible\:outline:focus-visible{
+  outline-style: solid;
+}
+
+.focus-visible\:outline-2:focus-visible{
+  outline-width: 2px;
+}
+
+.focus-visible\:outline-offset-4:focus-visible{
+  outline-offset: 4px;
+}
+
+.focus-visible\:outline-charcoal:focus-visible{
+  outline-color: #2B2B2B;
 }
 
 .active\:scale-95:active{
@@ -2271,6 +2360,11 @@ body.audio-gate-visible #sorting-main {
 }
 
 @media (min-width: 640px){
+  .sm\:my-10{
+    margin-top: 2.5rem;
+    margin-bottom: 2.5rem;
+  }
+
   .sm\:h-14{
     height: 3.5rem;
   }
@@ -2283,8 +2377,16 @@ body.audio-gate-visible #sorting-main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .sm\:flex-row{
+    flex-direction: row;
+  }
+
   .sm\:gap-5{
     gap: 1.25rem;
+  }
+
+  .sm\:gap-8{
+    gap: 2rem;
   }
 
   .sm\:p-8{
@@ -2316,6 +2418,11 @@ body.audio-gate-visible #sorting-main {
     padding-bottom: 2.5rem;
   }
 
+  .sm\:py-12{
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
   .sm\:py-3{
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
@@ -2326,6 +2433,11 @@ body.audio-gate-visible #sorting-main {
     line-height: 2rem;
   }
 
+  .sm\:text-3xl{
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+
   .sm\:text-4xl{
     font-size: 2.25rem;
     line-height: 2.5rem;
@@ -2333,6 +2445,11 @@ body.audio-gate-visible #sorting-main {
 
   .sm\:text-5xl{
     font-size: 3rem;
+    line-height: 1;
+  }
+
+  .sm\:text-6xl{
+    font-size: 3.75rem;
     line-height: 1;
   }
 

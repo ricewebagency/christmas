@@ -10,19 +10,62 @@
     <link rel="stylesheet" href="./css/main.css">
     <script src="./js/smooth-scroll.js" defer></script>
     <script src="./js/background-audio.js" defer></script>
+    <script type="module" src="./js/map.js"></script>
 </head>
 
 <body class="relative min-h-dvh overflow-x-hidden bg-neutral-950 font-serif text-amber-50 antialiased" data-asset-base-path="../">
     <audio id="background-audio" preload="auto" loop autoplay>
         <source src="./assets/music/map/ministry-of-magic.mp3" type="audio/mp3">
     </audio>
+
+    <!-- Top overlay, intro screen-loader that swipes up on first paint. -->
+    <div data-screen-loader aria-hidden="true"
+        class="pointer-events-none fixed inset-0 z-[999] transform-gpu will-change-transform bg-gradient-to-b from-black via-black to-black animate-screenLoaderSwipeUp">
+    </div>
+
     <div aria-hidden="true"
         class="pointer-events-none absolute inset-0 z-0 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center bg-no-repeat opacity-100">
     </div>
 
     <main class="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
-        <section>
-            <!-- TODO: Add content -->
+        <section lang="en" aria-labelledby="map-title"
+            class="w-full max-w-2xl px-4 py-8 text-center font-inkpot text-charcoal sm:px-8 sm:py-12">
+            <header>
+                <p class="text-sm italic leading-relaxed sm:text-base">Messrs. Moony, Wormtail, Padfoot &amp; Prongs<br>
+                    are proud to present</p>
+                <h1 id="map-title" class="mt-5 text-4xl leading-tight sm:text-6xl">The Marauder's Map</h1>
+                <p class="mt-5 text-lg italic sm:text-xl">I solemnly swear that I am up to no good.</p>
+            </header>
+
+            <div class="my-8 border-y border-charcoal/30 py-7 sm:my-10">
+                <h2 class="text-2xl sm:text-3xl">Your next stop: the Great Hall</h2>
+                <p class="mx-auto mt-4 max-w-lg text-base leading-relaxed text-charcoal/90 sm:text-lg">
+                    Every adventure deserves a feast. Leave the secret passages behind and join us for
+                    a Christmas evening filled with candlelight, good company and a little magic.
+                </p>
+                <dl class="mt-6 grid gap-5 text-base sm:grid-cols-2">
+                    <div>
+                        <dt class="text-sm uppercase tracking-widest text-charcoal/70">When</dt>
+                        <dd class="mt-2 text-lg">Christmas Eve, 24 December<br>Doors open at 19:00</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm uppercase tracking-widest text-charcoal/70">Your owl is expected</dt>
+                        <dd class="mt-2 text-lg">Reply by 1 December</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <nav aria-label="Plan your evening" class="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
+                <a href="./invite"
+                    class="inline-flex min-h-11 items-center px-3 underline decoration-charcoal/40 underline-offset-4 transition-colors hover:decoration-charcoal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal">
+                    Read your invitation
+                </a>
+                <a href="./rsvp"
+                    class="inline-flex min-h-11 items-center justify-center rounded-sm border border-charcoal/60 px-5 py-3 transition-colors hover:bg-charcoal/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal">
+                    Send your owl <span aria-hidden="true" class="ml-3">&rarr;</span>
+                </a>
+            </nav>
+            <p class="mt-8 text-sm italic text-charcoal/70">Keep this parchment away from prying eyes.</p>
         </section>
     </main>
 </body>

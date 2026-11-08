@@ -65,6 +65,7 @@ const PHOENIX_SCROLL_FINAL_ROTATION_DEG = 34;
 const PHOENIX_SCROLL_IMPACT_PARTICLE_COUNT = 16;
 const PHOENIX_SCROLL_IMPACT_PARTICLE_DURATION_MS = 850;
 const PHOENIX_SCROLL_IMPACT_PARTICLE_SPREAD_PX = 110;
+const PHOENIX_SCROLL_IMPACT_ADVANCE_MS = 2000;
 const PHOENIX_FRAME_SOURCES = [
     './assets/images/chamber/phoenix-1.png',
     './assets/images/chamber/phoenix-2.png',
@@ -90,16 +91,6 @@ const BASILISK_PRELOADS = [
     preloadImage(PHOENIX_SCROLL_SOURCE)
 ];
 
-const CHAMBER_DEBUG_LOGS_ENABLED = true;
-
-function debugChamberLog(...args) {
-    if (!CHAMBER_DEBUG_LOGS_ENABLED) {
-        return;
-    }
-
-    console.log('[chamber]', ...args);
-}
-
 async function loadBasiliskDialogue() {
     try {
         const response = await fetch('./assets/files/chamber-dialogues.json');
@@ -124,17 +115,6 @@ async function loadBasiliskDialogue() {
         const seventhGroup = groups.find((group) => Number(group?.groupId) === 7);
         const eighthGroup = groups.find((group) => Number(group?.groupId) === 8);
 
-        debugChamberLog('Loaded dialogue groups', {
-            g1: Array.isArray(encounterGroup?.dialogues) ? encounterGroup.dialogues.length : 0,
-            g2: Array.isArray(secondGroup?.dialogues) ? secondGroup.dialogues.length : 0,
-            g3: Array.isArray(thirdGroup?.dialogues) ? thirdGroup.dialogues.length : 0,
-            g4: Array.isArray(fourthGroup?.dialogues) ? fourthGroup.dialogues.length : 0,
-            g5: Array.isArray(fifthGroup?.dialogues) ? fifthGroup.dialogues.length : 0,
-            g6: Array.isArray(sixthGroup?.dialogues) ? sixthGroup.dialogues.length : 0,
-            g7: Array.isArray(seventhGroup?.dialogues) ? seventhGroup.dialogues.length : 0,
-            g8: Array.isArray(eighthGroup?.dialogues) ? eighthGroup.dialogues.length : 0
-        });
-
         return {
             encounterDialogues: Array.isArray(encounterGroup?.dialogues) ? encounterGroup.dialogues : [],
             secondGroupDialogues: Array.isArray(secondGroup?.dialogues) ? secondGroup.dialogues : [],
@@ -146,7 +126,6 @@ async function loadBasiliskDialogue() {
             eighthGroupDialogues: Array.isArray(eighthGroup?.dialogues) ? eighthGroup.dialogues : []
         };
     } catch {
-        debugChamberLog('Failed to load chamber dialogues; using empty fallback.');
         return {
             encounterDialogues: [],
             secondGroupDialogues: [],
@@ -282,7 +261,24 @@ function playBasiliskSpellAudio(department) {
         return;
     }
 
-    audio.volume = department === 'slytherin' ? 0.5 : 0.15;
+    switch (department) {
+        case 'gryffindor':
+            audio.volume = 0.15;
+            break;
+        case 'hufflepuff':
+            audio.volume = 0.15;
+            break;
+        case 'ravenclaw':
+            audio.volume = 0.45;
+            break;
+        case 'slytherin':
+            audio.volume = 0.5;
+            break;
+        default:
+            audio.volume = 0.15;
+            break;
+    }
+
     audio.currentTime = 0;
 
     void audio.play().catch(() => {});
@@ -505,7 +501,7 @@ function createBasiliskChatbox(continueLabel, textContent = '') {
     chatbox.style.transitionDuration = `${BASILISK_FADE_IN_MS}ms`;
     chatbox.style.pointerEvents = 'auto';
 
-    text.className = 'max-w-[72ch] self-start text-left font-inkpot text-sm leading-relaxed tracking-wide text-[#3a2413] drop-shadow-[0_1px_0_rgba(255,244,223,0.35)]';
+    text.className = 'max-w-[72ch] self-start text-left font-inkpot text-base leading-relaxed tracking-wide text-[#3a2413] drop-shadow-[0_1px_0_rgba(255,244,223,0.35)]';
     text.textContent = textContent;
     chatbox.appendChild(text);
     chatbox.appendChild(continueLabel);
@@ -522,7 +518,7 @@ function createBasiliskContinueLabel(labelText = '') {
     label.style.transitionDuration = `${BASILISK_FADE_IN_MS}ms`;
     label.style.pointerEvents = 'none';
     label.textContent = labelText;
-    label.classList.add('font-inkpot', 'text-xs', 'tracking-wide', 'text-black/85', 'drop-shadow-[0_1px_0_rgba(255,255,255,0.18)]');
+    label.classList.add('font-inkpot', 'text-sm', 'tracking-wide', 'text-black/85', 'drop-shadow-[0_1px_0_rgba(255,255,255,0.18)]');
 
     return label;
 }
@@ -558,7 +554,36 @@ function showBasiliskStaffLayer(staffLayer, department) {
     }
 
     staffLayer.style.backgroundImage = `url('${source}')`;
+    staffLayer.style.transform = 'rotate(-130deg)';
     staffLayer.style.opacity = '1';
+}
+
+function startBasiliskStaffIdleSway(staffLayer, prefersReducedMotion = false) {
+    if (!(staffLayer instanceof HTMLElement)) {
+        return;
+    }
+
+    staffLayer.getAnimations().forEach((animation) => animation.cancel());
+
+    if (prefersReducedMotion) {
+        staffLayer.style.transform = 'rotate(-130deg)';
+        return;
+    }
+
+    staffLayer.animate([
+        { transform: 'translate3d(0, 0, 0) rotate(-130deg)' },
+        { transform: 'translate3d(9px, -10px, 0) rotate(-130deg)' },
+        { transform: 'translate3d(18px, 0, 0) rotate(-130deg)' },
+        { transform: 'translate3d(9px, 12px, 0) rotate(-130deg)' },
+        { transform: 'translate3d(-8px, 14px, 0) rotate(-130deg)' },
+        { transform: 'translate3d(-18px, 0, 0) rotate(-130deg)' },
+        { transform: 'translate3d(-8px, -12px, 0) rotate(-130deg)' },
+        { transform: 'translate3d(0, 0, 0) rotate(-130deg)' }
+    ], {
+        duration: 2200,
+        iterations: Infinity,
+        easing: 'linear'
+    });
 }
 
 function emitBasiliskSpellParticles(particlesLayer, originX, originY, department, onComplete) {
@@ -648,6 +673,8 @@ function emitBasiliskSpellParticles(particlesLayer, originX, originY, department
 }
 
 function playBasiliskStaffSpellCast(staffLayer, particlesLayer, basiliskLayer, prefersReducedMotion, department, onEnchantedShown, enchantedFrameSource = BASILISK_ENCHANTED_FRAME_SOURCE, hissAudioSource = BASILISK_HISS_AUDIO_SOURCE, transitionFrameSource = BASILISK_TAUNT_FRAME_SOURCE) {
+    staffLayer.getAnimations().forEach((animation) => animation.cancel());
+
     const swing = staffLayer.animate([
         { transform: 'rotate(-130deg)' },
         { transform: 'rotate(-124deg)', offset: 0.18 },
@@ -758,6 +785,18 @@ function showFinalBackdropSlowly() {
     finalBackdrop.style.opacity = '1';
 }
 
+function fadeOutBasiliskStaffLayer(staffLayer) {
+    if (!(staffLayer instanceof HTMLElement)) {
+        return;
+    }
+
+    staffLayer.style.transitionProperty = 'opacity, transform';
+    staffLayer.style.transitionDuration = `${BASILISK_FINAL_BACKDROP_FADE_IN_MS}ms`;
+    staffLayer.style.transitionTimingFunction = 'ease-out';
+    staffLayer.style.transform = 'translate(-3px, 10px) rotate(-130deg)';
+    staffLayer.style.opacity = '0';
+}
+
 function fadeOutBasiliskAfterFinalBackdrop(basiliskLayer) {
     if (!(basiliskLayer instanceof HTMLElement)) {
         return;
@@ -859,7 +898,7 @@ function dropPhoenixScroll(phoenixLayer, phoenixScrollLayer, prefersReducedMotio
             Math.max(
                 dropDuration - PHOENIX_SCROLL_THUD_LEAD_MS,
                 Math.round(dropDuration * 0.88)
-            )
+            ) - PHOENIX_SCROLL_IMPACT_ADVANCE_MS
         );
     window.setTimeout(() => {
         playPhoenixPaperThudAudio();
@@ -1032,7 +1071,6 @@ function replaceBackgroundAudioAfterBasiliskDefeat() {
 }
 
 function fadeOutBodyAndNavigateToMap() {
-    debugChamberLog('Starting body fade-out before navigation to ./map.');
     const bodyElement = document.body;
 
     if (!(bodyElement instanceof HTMLElement)) {
@@ -1053,7 +1091,6 @@ function fadeOutBodyAndNavigateToMap() {
     });
 
     window.setTimeout(() => {
-        debugChamberLog('Navigating to ./map.');
         window.location.href = './map';
     }, CHAMBER_MAP_REDIRECT_DELAY_MS);
 }
@@ -1163,28 +1200,19 @@ async function initChamberScene() {
     const transitionToDialogueGroup = (groupId, delayMs = 0) => {
         const nextDialogues = dialogueGroupById[groupId];
 
-        debugChamberLog('Requested group transition', {
-            toGroupId: groupId,
-            delayMs,
-            dialogueCount: Array.isArray(nextDialogues) ? nextDialogues.length : null
-        });
-
         if (!Array.isArray(nextDialogues) || nextDialogues.length === 0) {
-            debugChamberLog('Skipped group transition because target group has no dialogues.', {
-                toGroupId: groupId
-            });
             isTransitioningGroup = false;
             return;
         }
 
         window.setTimeout(() => {
-            debugChamberLog('Running group transition timeout callback', {
-                toGroupId: groupId,
-                delayMs
-            });
             currentGroupId = groupId;
             activeDialogues = nextDialogues;
             currentDialogueIndex = 0;
+
+            if (currentGroupId === 2) {
+                startBasiliskStaffIdleSway(basiliskStaffLayer, prefersReducedMotion);
+            }
 
             if (currentGroupId === 4) {
                 showFinalBackdropSlowly();
@@ -1193,6 +1221,7 @@ async function initChamberScene() {
             }
 
             if (currentGroupId === 5) {
+                fadeOutBasiliskStaffLayer(basiliskStaffLayer);
                 playPhoenixFlight(phoenixLayer, phoenixScrollLayer);
             }
 
@@ -1203,36 +1232,15 @@ async function initChamberScene() {
                 isContinueVisible = true;
             }, BASILISK_CONTINUE_BUTTON_REVEAL_DELAY_MS);
             isTransitioningGroup = false;
-            debugChamberLog('Group transition complete', {
-                activeGroupId: currentGroupId,
-                currentDialogueIndex
-            });
         }, delayMs);
     };
 
     basiliskContinueLabel.addEventListener('click', () => {
-        debugChamberLog('Continue clicked', {
-            currentGroupId,
-            currentDialogueIndex,
-            activeDialogueCount: activeDialogues.length,
-            isTransitioningGroup,
-            isContinueVisible
-        });
-
         if (isTransitioningGroup || !isContinueVisible) {
-            debugChamberLog('Continue click ignored due to state lock.', {
-                isTransitioningGroup,
-                isContinueVisible
-            });
             return;
         }
 
         if (currentDialogueIndex >= activeDialogues.length - 1) {
-            debugChamberLog('Reached final dialogue in current group', {
-                currentGroupId,
-                currentDialogueIndex,
-                activeDialogueCount: activeDialogues.length
-            });
             hideBasiliskChatbox(basiliskChatbox);
             hideBasiliskContinueLabel(basiliskContinueLabel);
             isContinueVisible = false;
@@ -1280,10 +1288,6 @@ async function initChamberScene() {
                 transitionToDialogueGroup(7, BASILISK_DIALOGUE_GROUP_REENTRY_DELAY_MS);
             } else if (currentGroupId === 7) {
                 isTransitioningGroup = true;
-                debugChamberLog('Transitioning from group 7 to 8 with delay', {
-                    delayMs: BASILISK_GROUP_SEVEN_TO_EIGHT_DELAY_MS
-                });
-
                 transitionToDialogueGroup(8, BASILISK_GROUP_SEVEN_TO_EIGHT_DELAY_MS);
             } else if (currentGroupId === 8) {
                 if (!hasStartedMapRedirect) {
