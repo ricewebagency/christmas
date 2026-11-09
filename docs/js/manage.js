@@ -268,6 +268,20 @@ function loadSettings() {
     el('manage-key').value = state.settings.key;
 }
 
+// Adminlink (/admin/#token=...): token overnemen en uit de URL halen.
+function consumeTokenFromHash() {
+    const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+
+    if (!token) {
+        return;
+    }
+
+    const stored = readJsonFromLocalStorage(SETTINGS_STORAGE_KEY, null);
+    const baseUrl = stored && typeof stored === 'object' && stored.baseUrl ? stored.baseUrl : state.settings.baseUrl;
+    writeJsonToLocalStorage(SETTINGS_STORAGE_KEY, { baseUrl, key: token });
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+}
+
 function saveSettings(event) {
     event.preventDefault();
     state.settings.baseUrl = el('manage-base-url').value.trim().replace(/\/+$/, '');
@@ -278,7 +292,7 @@ function saveSettings(event) {
 }
 
 function clearSettings() {
-    if (!window.confirm('Instellingen wissen?\nAPI-URL en function key worden uit deze browser verwijderd.')) {
+    if (!window.confirm('Instellingen wissen?\nAPI-URL en sleutel worden uit deze browser verwijderd.')) {
         return;
     }
 
@@ -298,7 +312,7 @@ async function request(method, path, body) {
     const headers = {};
 
     if (state.settings.key) {
-        headers['x-functions-key'] = state.settings.key;
+        headers.Authorization = `Bearer ${state.settings.key}`;
     }
 
     if (body !== undefined) {
@@ -332,7 +346,7 @@ async function request(method, path, body) {
 
     if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-            throw new Error(`Geen toegang (${response.status}). Controleer de function key.`);
+            throw new Error(`Geen toegang (${response.status}). Controleer de hoofdsleutel of admin-token.`);
         }
 
         throw new Error(data?.message || data?.error || `Request mislukt: ${response.status}`);
@@ -1050,6 +1064,7 @@ function renderCreated() {
 // ---------- Init ----------
 
 function init() {
+    consumeTokenFromHash();
     loadSettings();
 
     el('manage-refresh').addEventListener('click', loadAll);

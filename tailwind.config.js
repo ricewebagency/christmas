@@ -3,6 +3,10 @@ module.exports = {
   content: ["./src/**/*.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      screens: {
+        // Short viewports (e.g. 320x593): compact map layout.
+        short: { raw: "(max-height: 640px)" },
+      },
       colors: {
         primary: "#ffffff",
         accent: "#C6A45A",

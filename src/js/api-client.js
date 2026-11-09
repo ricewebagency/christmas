@@ -1,6 +1,7 @@
 import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js';
 
 // Empty = mock mode (state in localStorage). Example: 'https://<function-app>.azurewebsites.net'.
+// Local dev origins (localhost/127.0.0.1:8000) must be in the Function App's CORS list.
 export const API_BASE_URL = 'https://magicalwinterbanquetapi20261108231610-btbjadbzavbybubk.westeurope-01.azurewebsites.net';
 
 const GUEST_CODE_STORAGE_KEY = 'magical-winter-banquet.guest-code';
