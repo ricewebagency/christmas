@@ -46,7 +46,7 @@
     <script src="./js/background-audio.js" defer></script>
 </head>
 
-<body data-reveal-mode="after-envelope"
+<body data-reveal-mode="after-envelope" data-reveal-order="random"
     class="relative max-h-dvh min-h-dvh overflow-x-hidden bg-neutral-950 font-serif text-amber-50 antialiased" data-asset-base-path="../">
     <audio id="background-audio" preload="auto" loop autoplay>
         <source src="./assets/music/diagon-alley.mp3" type="audio/mp3">
@@ -75,7 +75,7 @@
 
                 <p data-reveal style="--reveal-delay: 250ms;"
                     class="mt-8 text-left text-xl italic text-charcoal sm:text-2xl">
-                    Dear <span id="guest-name">Guest</span>,</p>
+                    Dear <span id="guest-name" class="transition-opacity duration-700 ease-out">Guest</span>,</p>
                 <div
                     class="mt-8 space-y-5 text-left text-sm leading-relaxed tracking-wide text-charcoal/90 sm:text-base">
                     <p data-reveal style="--reveal-delay: 1000ms;">
@@ -88,7 +88,7 @@
                     <p data-reveal style="--reveal-delay: 2500ms;">
                         We await your owl by no later than 1 December.
                     </p>
-                    <p data-reveal style="--reveal-delay: 2500ms;" class="pt-2">
+                    <p data-reveal data-reveal-last style="--reveal-delay: 2500ms;" class="pt-2">
                         <a href="./rsvp/" data-invite-cta
                             class="inline-flex items-center gap-2 text-sm underline tracking-wide text-charcoal/90 transition-opacity duration-[1200ms] hover:opacity-80 focus:opacity-0 focus-visible:opacity-0">
                             <span data-invite-cta-label>Write a response letter</span>
@@ -115,6 +115,51 @@
             </header>
         </section>
     </main>
+    <!-- Pincode dialog: opened by invite.js over the letter when no valid code is known. Modal, so the letter
+         behind it cannot be used; it only closes once the password is accepted. -->
+    <dialog data-pin-dialog aria-labelledby="pin-title" aria-describedby="pin-hint"
+        class="w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-sm border-0 bg-transparent p-0 text-charcoal shadow-2xl shadow-black/70 transition-opacity duration-500 ease-out backdrop:bg-black/60 backdrop:backdrop-blur-sm backdrop:transition-opacity backdrop:duration-500">
+        <form data-pin-form novalidate
+            class="flex flex-col items-center gap-8 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center px-6 py-10 text-center font-inkpot motion-safe:animate-popIn sm:px-10 sm:py-12">
+            <div class="flex flex-col gap-2">
+                <h2 id="pin-title" class="text-2xl italic leading-snug sm:text-3xl">
+                    Enter the password to the Great Hall
+                </h2>
+                <p id="pin-hint" class="text-base italic text-charcoal/70 sm:text-lg">
+                    The four digits from your invitation
+                </p>
+            </div>
+
+            <!-- Four real inputs: focus moves on by itself, Backspace goes back, pasting fills them all.
+                 The form submits on its own once all four are filled. -->
+            <div data-pin-code-boxes role="group" aria-labelledby="pin-title"
+                aria-describedby="pin-hint pin-message" class="flex gap-3 sm:gap-4">
+                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                        autocorrect="off" spellcheck="false" aria-label="Digit 1 of 4"
+                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                        autocorrect="off" spellcheck="false" aria-label="Digit 2 of 4"
+                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                        autocorrect="off" spellcheck="false" aria-label="Digit 3 of 4"
+                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                        autocorrect="off" spellcheck="false" aria-label="Digit 4 of 4"
+                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+            </div>
+
+            <div class="flex min-h-[3rem] flex-col items-center gap-3">
+                <p id="pin-message" data-pin-message aria-live="polite"
+                    class="max-w-sm text-sm italic leading-relaxed text-red-900 sm:text-base"></p>
+
+                <!-- Only shown when the castle could not be reached; the code is kept so one tap retries. -->
+                <button type="button" data-pin-retry
+                    class="hidden text-base italic text-charcoal/85 underline underline-offset-4 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal sm:text-lg">
+                    Try again
+                </button>
+            </div>
+        </form>
+    </dialog>
 </body>
 
 </html>

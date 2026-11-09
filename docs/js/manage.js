@@ -1,4 +1,5 @@
 import { API_BASE_URL, getStoredGuestCode } from './api-client.js';
+import { redirectToPage } from './guest-flow.js';
 import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js';
 
 const SETTINGS_STORAGE_KEY = 'christmas-at-the-great-hall.manage-settings';
@@ -370,7 +371,12 @@ async function request(method, path, body) {
     }
 
     if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
+            redirectToPage('home');
+            throw new Error('Geen toegang (401).');
+        }
+
+        if (response.status === 403) {
             throw new Error(`Geen toegang (${response.status}). Controleer de hoofdsleutel of admin-token, of vraag of je pincode adminrechten heeft.`);
         }
 

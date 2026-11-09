@@ -38,58 +38,16 @@
     <meta name="twitter:image" content="./assets/images/the-great-hall.png">
     <meta name="twitter:image:alt" content="The Great Hall lit by floating candles and a festive feast.">
 
-    <script src="./js/home-preflight.js"></script>
     <link rel="stylesheet" href="./css/main.css">
     <script src="./js/audio-toggle.js"></script>
     <script type="module" src="./js/home.js"></script>
-    <script src="./js/background-audio.js" defer></script>
 </head>
 
 <body class="relative min-h-dvh overflow-x-hidden bg-neutral-950 font-serif text-amber-50 antialiased" data-asset-base-path="./">
-    <audio id="background-audio" preload="auto" loop autoplay muted>
-        <source src="./assets/music/diagon-alley.mp3" type="audio/mp3">
-    </audio>
-    <div aria-hidden="true"
-        class="pointer-events-none absolute inset-0 z-0 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center bg-no-repeat transition-opacity duration-700 [html[data-home-checking]_&]:opacity-0">
-    </div>
-
-    <main class="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 font-inkpot text-charcoal sm:px-6">
-        <!-- Shown while a stored or linked code is checked; delayed so quick redirects don't flash it. -->
-        <p data-home-loading class="animate-fadeIn800 text-lg italic text-charcoal/80 [html[data-home-checking]_&]:text-amber-100/70">The castle doors are opening&hellip;</p>
-
-        <form data-home-form novalidate
-            class="hidden w-full max-w-md flex-col items-center gap-8 text-center animate-fadeIn1000">
-            <label for="guest-code" class="text-2xl italic leading-snug sm:text-3xl">
-                Speak the password to enter the Great Hall
-            </label>
-
-            <!-- One real input (typing and pasting stay simple); the four boxes mirror its value. -->
-            <div class="group relative">
-                <input id="guest-code" name="guestCode" type="text" inputmode="numeric" pattern="[0-9]*"
-                    maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false"
-                    aria-describedby="guest-code-message"
-                    class="absolute inset-0 z-10 h-full w-full cursor-text appearance-none bg-transparent text-base text-transparent caret-transparent opacity-0 outline-none">
-                <div data-home-code-boxes aria-hidden="true" class="flex gap-3 sm:gap-4">
-                    <span data-home-code-box
-                        class="flex h-16 w-12 items-center justify-center border-b-2 border-charcoal/40 text-4xl transition-colors duration-200 sm:h-20 sm:w-14 sm:text-5xl"></span>
-                    <span data-home-code-box
-                        class="flex h-16 w-12 items-center justify-center border-b-2 border-charcoal/40 text-4xl transition-colors duration-200 sm:h-20 sm:w-14 sm:text-5xl"></span>
-                    <span data-home-code-box
-                        class="flex h-16 w-12 items-center justify-center border-b-2 border-charcoal/40 text-4xl transition-colors duration-200 sm:h-20 sm:w-14 sm:text-5xl"></span>
-                    <span data-home-code-box
-                        class="flex h-16 w-12 items-center justify-center border-b-2 border-charcoal/40 text-4xl transition-colors duration-200 sm:h-20 sm:w-14 sm:text-5xl"></span>
-                </div>
-            </div>
-
-            <p id="guest-code-message" data-home-message aria-live="polite"
-                class="min-h-[3rem] max-w-sm text-sm italic leading-relaxed text-red-900 sm:text-base"></p>
-
-            <button type="submit" data-home-submit
-                class="inline-flex items-center gap-2 text-base text-charcoal/85 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:underline disabled:pointer-events-none disabled:opacity-40 sm:text-lg">
-                <span>Enter</span>
-                <span aria-hidden="true">&rarr;</span>
-            </button>
-        </form>
+    <main class="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 font-inkpot sm:px-6">
+        <!-- Only routes on: known codes to their next step, everyone else to the invitation (pincode dialog there).
+             Delayed fade so quick redirects don't flash it. -->
+        <p class="animate-fadeIn800 text-lg italic text-amber-100/70">The castle doors are opening&hellip;</p>
     </main>
 </body>
 

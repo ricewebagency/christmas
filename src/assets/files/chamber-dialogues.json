@@ -17,8 +17,8 @@
       "dialogues": [
         {
           "id": 4,
-          "text": "You raise your wand and concentrate. Cast your spell now!",
-          "readMore": "Click to cast 💥"
+          "text": "You raise your wand and concentrate. Click your wand to cast your spell!",
+          "readMore": "Ready? 🪄"
         }
       ]
     },
@@ -33,8 +33,8 @@
         },
         {
           "id": 7,
-          "text": "Quickly, cast again and defeat the Basilisk!",
-          "readMore": "Click to cast again 💥"
+          "text": "Quickly, click your wand again and defeat the Basilisk!",
+          "readMore": "Ready? 🪄"
         }
       ]
     },

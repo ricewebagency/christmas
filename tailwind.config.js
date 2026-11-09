@@ -54,6 +54,11 @@ module.exports = {
           from: { transform: "rotate(0deg)" },
           to: { transform: "rotate(360deg)" },
         },
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%, 60%": { transform: "translateX(-8px)" },
+          "40%, 80%": { transform: "translateX(8px)" },
+        },
         loadingFadeOut: {
           "0%": { opacity: "1" },
           "100%": { opacity: "0" },
@@ -239,6 +244,7 @@ module.exports = {
         marquee: "marquee 30s linear infinite",
         spinSlow: "spinSlow 60s linear infinite",
         loadingFadeOut: "loadingFadeOut 0.4s ease-out 0.5s forwards",
+        shake: "shake 0.4s ease-in-out",
         screenLoaderSwipeUp: "screenLoaderSwipeUp 2.4s ease-in-out both",
         candleFlicker: "candleFlicker 4.8s ease-in-out infinite",
         mapPeek: "mapPeek 3.6s ease-in-out infinite",

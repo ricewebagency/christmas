@@ -468,7 +468,7 @@ async function loadMockGuestForCode(code) {
 
     if (String(code ?? '').replace(/\s+/g, '') !== MOCK_GUEST_CODE) {
         registerMockFailedAttempt();
-        throw new ApiError(404, 'guest_not_found', 'That password is not known to the castle.');
+        throw new ApiError(404, 'guest_not_found', 'That password is not invited to Christmas at the Great Hall.');
     }
 
     return readMockGuest();

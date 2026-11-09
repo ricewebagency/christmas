@@ -13,10 +13,18 @@ export function parseRevealDelayMs(element, cssVariableName = "--reveal-delay") 
     return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
 }
 
+const RANDOM_EXIT_DELAY_OPTIONS_MS = [400, 800, 1200, 1600, 2000];
+
+export function getRandomExitDelayMs() {
+    const index = Math.floor(Math.random() * RANDOM_EXIT_DELAY_OPTIONS_MS.length);
+    return RANDOM_EXIT_DELAY_OPTIONS_MS[index];
+}
+
 export function runRevealExitSequence({
     selector = "[data-reveal]",
     fadeDurationMs = 450,
-    revealDelayCssVariable = "--reveal-delay"
+    revealDelayCssVariable = "--reveal-delay",
+    getDelayMs = (element) => parseRevealDelayMs(element, revealDelayCssVariable)
 } = {}) {
     const revealItems = Array.from(document.querySelectorAll(selector));
     if (revealItems.length === 0) {
@@ -26,7 +34,7 @@ export function runRevealExitSequence({
     let longestDelayMs = 0;
 
     revealItems.forEach((element) => {
-        const delayMs = parseRevealDelayMs(element, revealDelayCssVariable);
+        const delayMs = getDelayMs(element);
         longestDelayMs = Math.max(longestDelayMs, delayMs);
 
         element.style.animation = "none";

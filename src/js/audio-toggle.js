@@ -1,4 +1,4 @@
-// Global mute toggle: fixed button bottom-right, state persisted across pages.
+// Global mute toggle: fixed button bottom-left, state persisted across pages.
 // Load as a classic (non-deferred) script in <head> so the play() hook is installed
 // before any other script creates or plays audio.
 (() => {
@@ -9,14 +9,8 @@
     const ADMIN_URL = document.currentScript ? new URL("../admin/", document.currentScript.src).href : null;
     const trackedMedia = new Set();
 
-    const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-
-    // Locally the admin page needs no key, so everyone counts as admin there.
+    // Only show the admin button when the API confirmed the guest's pincode is admin.
     const isAdmin = () => {
-        if (isLocal) {
-            return true;
-        }
-
         try {
             return window.localStorage.getItem(GUEST_ADMIN_KEY) === "true";
         } catch {
@@ -110,7 +104,7 @@
 
         button = document.createElement("button");
         button.type = "button";
-        button.className = "fixed bottom-3 right-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:bottom-4 sm:right-4";
+        button.className = "fixed bottom-3 left-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:bottom-4 sm:left-4";
 
         // Keep clicks from reaching page-level bubble handlers (capture-phase audio unlock still runs).
         button.addEventListener("pointerdown", (event) => event.stopPropagation());
@@ -139,7 +133,7 @@
         if (!adminLink) {
             adminLink = document.createElement("a");
             adminLink.href = ADMIN_URL;
-            adminLink.className = "fixed bottom-[3.25rem] right-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:bottom-14 sm:right-4";
+            adminLink.className = "fixed bottom-[3.25rem] left-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:bottom-14 sm:left-4";
             adminLink.innerHTML = ICON_ADMIN;
             adminLink.setAttribute("aria-label", "Admin Panel");
             adminLink.title = "Admin Panel";

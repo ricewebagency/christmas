@@ -1,5 +1,6 @@
 import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js';
 import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js';
+import { getRandomExitDelayMs } from './page-transitions.js';
 
 const ATTENDANCE_CHOICE_MAP = {
     yes: 'accepted',
@@ -9,12 +10,6 @@ const ATTENDANCE_CHOICE_MAP = {
 };
 
 const RSVP_ERROR_MESSAGE = 'The owl could not deliver your letter, please try again.';
-
-function getRandomExitDelayMs() {
-    const delayOptionsMs = [400, 800, 1200, 1600, 2000];
-    const index = Math.floor(Math.random() * delayOptionsMs.length);
-    return delayOptionsMs[index];
-}
 
 function wait(ms) {
     return new Promise((resolve) => {

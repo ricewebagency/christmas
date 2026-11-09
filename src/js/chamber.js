@@ -436,13 +436,60 @@ function createBasiliskBackdrop() {
 function createBasiliskStaffLayer() {
     const staffLayer = document.createElement('div');
 
-    staffLayer.setAttribute('aria-hidden', 'true');
-    staffLayer.className = 'pointer-events-none fixed bottom-[212px] left-[154px] z-[7] aspect-[16/9] w-[min(64vw,44rem)] bg-contain bg-center bg-no-repeat opacity-0 transition-opacity ease-out';
+    staffLayer.className ='pointer-events-none fixed bottom-[212px] left-[154px] z-[7] aspect-[16/9] w-[min(64vw,44rem)] bg-contain bg-center bg-no-repeat opacity-0 transition-opacity ease-out';
     staffLayer.style.transitionDuration = `${BASILISK_STAFF_FADE_IN_MS}ms`;
     staffLayer.style.transform = 'rotate(-130deg)';
     staffLayer.style.transformOrigin = 'bottom center';
 
     return staffLayer;
+}
+
+// Diagonal strip over the wand in the staff image (contained 16:9 layer, ~25deg slope).
+function createBasiliskWandHitbox() {
+    const hitbox = document.createElement('button');
+
+    hitbox.type = 'button';
+    hitbox.disabled = true;
+    hitbox.tabIndex = -1;
+    hitbox.setAttribute('aria-label', 'Cast your spell with your wand');
+    hitbox.className = 'pointer-events-none absolute left-[52%] top-[53%] h-[18%] w-[104%] -translate-x-1/2 -translate-y-1/2 rotate-[25deg] cursor-pointer rounded-full bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-amber-200/70';
+
+    return hitbox;
+}
+
+function armBasiliskWand(staffLayer, hitbox, prefersReducedMotion = false) {
+    const glowFrames = [
+        { filter: 'drop-shadow(0 0 2px rgba(255, 214, 140, 0.25))' },
+        { filter: 'drop-shadow(0 0 18px rgba(255, 214, 140, 0.95))' },
+        { filter: 'drop-shadow(0 0 2px rgba(255, 214, 140, 0.25))' }
+    ];
+
+    if (prefersReducedMotion) {
+        staffLayer.style.filter = 'drop-shadow(0 0 14px rgba(255, 214, 140, 0.85))';
+    } else {
+        staffLayer.animate(glowFrames, {
+            duration: 1600,
+            iterations: Infinity,
+            easing: 'ease-in-out'
+        }).id = 'wand-glow';
+    }
+
+    hitbox.disabled = false;
+    hitbox.tabIndex = 0;
+    hitbox.style.pointerEvents = 'auto';
+    hitbox.focus({ preventScroll: true });
+}
+
+function disarmBasiliskWand(staffLayer, hitbox) {
+    staffLayer.getAnimations()
+        .filter((animation) => animation.id === 'wand-glow')
+        .forEach((animation) => animation.cancel());
+    staffLayer.style.filter = '';
+
+    hitbox.blur();
+    hitbox.disabled = true;
+    hitbox.tabIndex = -1;
+    hitbox.style.pointerEvents = 'none';
 }
 
 function createBasiliskSpellParticlesLayer() {
@@ -1135,6 +1182,7 @@ async function initChamberScene(guest) {
     const basiliskLayer = createBasiliskLayer();
     const basiliskBackdrop = createBasiliskBackdrop();
     const basiliskStaffLayer = createBasiliskStaffLayer();
+    const basiliskWandHitbox = createBasiliskWandHitbox();
     const basiliskSpellParticlesLayer = createBasiliskSpellParticlesLayer();
     const phoenixLayer = createPhoenixLayer();
     const phoenixScrollLayer = createPhoenixScrollLayer();
@@ -1147,6 +1195,7 @@ async function initChamberScene(guest) {
     let hasShownStaffLayer = false;
     let isContinueVisible = false;
     let hasStartedMapRedirect = false;
+    let isWandArmed = false;
 
     const dialogueGroupById = {
         1: encounterDialogues,
@@ -1172,7 +1221,7 @@ async function initChamberScene(guest) {
             activeDialogues = nextDialogues;
             currentDialogueIndex = 0;
 
-            if (currentGroupId === 2) {
+            if (currentGroupId === 2 || currentGroupId === 3) {
                 startBasiliskStaffIdleSway(basiliskStaffLayer, prefersReducedMotion);
             }
 
@@ -1218,24 +1267,8 @@ async function initChamberScene(guest) {
                 transitionToDialogueGroup(2, BASILISK_STAFF_FADE_IN_MS);
             } else if (currentGroupId === 2 || currentGroupId === 3) {
                 isTransitioningGroup = true;
-
-                const nextGroupId = currentGroupId === 2 && cabinDepartment === 'slytherin'
-                    ? 4
-                    : currentGroupId + 1;
-
-                playBasiliskStaffSpellCast(
-                    basiliskStaffLayer,
-                    basiliskSpellParticlesLayer,
-                    basiliskLayer,
-                    prefersReducedMotion,
-                    cabinDepartment,
-                    () => {
-                        transitionToDialogueGroup(nextGroupId);
-                    },
-                    currentGroupId === 3 ? BASILISK_ENCHANTED_FINAL_FRAME_SOURCE : BASILISK_ENCHANTED_FRAME_SOURCE,
-                    currentGroupId === 3 ? BASILISK_SECOND_HISS_AUDIO_SOURCE : BASILISK_HISS_AUDIO_SOURCE,
-                    currentGroupId === 3 ? BASILISK_ENCHANTED_SECOND_FRAME_SOURCE : BASILISK_TAUNT_FRAME_SOURCE
-                );
+                isWandArmed = true;
+                armBasiliskWand(basiliskStaffLayer, basiliskWandHitbox, prefersReducedMotion);
             } else if (currentGroupId === 4) {
                 isTransitioningGroup = true;
 
@@ -1266,6 +1299,36 @@ async function initChamberScene(guest) {
         currentDialogueIndex += 1;
         updateBasiliskDialogue(basiliskChatbox, basiliskContinueLabel, activeDialogues, currentDialogueIndex);
     });
+
+    basiliskWandHitbox.addEventListener('click', () => {
+        if (!isWandArmed || (currentGroupId !== 2 && currentGroupId !== 3)) {
+            return;
+        }
+
+        isWandArmed = false;
+        disarmBasiliskWand(basiliskStaffLayer, basiliskWandHitbox);
+
+        const isFinalStrike = currentGroupId === 3;
+        const nextGroupId = currentGroupId === 2 && cabinDepartment === 'slytherin'
+            ? 4
+            : currentGroupId + 1;
+
+        playBasiliskStaffSpellCast(
+            basiliskStaffLayer,
+            basiliskSpellParticlesLayer,
+            basiliskLayer,
+            prefersReducedMotion,
+            cabinDepartment,
+            () => {
+                transitionToDialogueGroup(nextGroupId);
+            },
+            isFinalStrike ? BASILISK_ENCHANTED_FINAL_FRAME_SOURCE : BASILISK_ENCHANTED_FRAME_SOURCE,
+            isFinalStrike ? BASILISK_SECOND_HISS_AUDIO_SOURCE : BASILISK_HISS_AUDIO_SOURCE,
+            isFinalStrike ? BASILISK_ENCHANTED_SECOND_FRAME_SOURCE : BASILISK_TAUNT_FRAME_SOURCE
+        );
+    });
+
+    basiliskStaffLayer.appendChild(basiliskWandHitbox);
     basiliskLayer.id = 'basilisk-layer';
     basiliskBackdrop.id = 'basilisk-backdrop';
     basiliskStaffLayer.id = 'basilisk-staff-layer';

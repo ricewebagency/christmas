@@ -97,7 +97,7 @@ Elke pagina roept bij het laden `guardPage('<pagina>')` aan. Als de gast op een 
   - één invoerveld voor de pincode: `inputmode="numeric"`, `pattern="[0-9]*"`, `maxlength="4"`, `autocomplete="off"`. Visueel als vier vakjes, technisch één input voor eenvoud en goede werking van plakken. *Uitgevoerd als onzichtbare input over vier vakjes die de waarde spiegelen (i.p.v. letter-spacing), zodat het Inkpot-font bruikbaar blijft;*
   - alleen cijfers toestaan; bij het 4e cijfer automatisch versturen (de knop "Enter" blijft als fallback);
   - bij een fout het veld leegmaken en de focus terugzetten;
-  - foutmeldingen: ongeldige code ("That password is not known to the castle"), 429 (met wachttijd) en een netwerkfout ("The owls could not reach the castle, try again");
+  - foutmeldingen: ongeldige code ("That password is not invited to Christmas at the Great Hall"), 429 (met wachttijd) en een netwerkfout ("The owls could not reach the castle, try again");
   - toegankelijk: `<label>`, `aria-live` voor fouten, Enter verstuurt.
 - [x] Netwerk- of serverfout bij een bewaarde code: de code **niet** wissen. Toon het invoerscherm met de foutmelding en de bewaarde code ingevuld.
 - [x] `404.html` alleen nog voor echt onbekende URL's.

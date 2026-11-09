@@ -1,10 +1,19 @@
 import {
+    getRandomExitDelayMs,
     lockInitialViewportHeight,
     pathEndsWith,
     runRevealExitSequence,
     setupLinkExitTransition
 } from "./page-transitions.js";
-import { getNextStep, getPageUrl, guardPage, whenDomReady } from "./guest-flow.js";
+import {
+    clearGuestCode,
+    getStoredGuestCode,
+    readGuestCodeFromUrl,
+    removeGuestCodeFromUrl,
+    verifyGuestCode
+} from "./api-client.js";
+import { getNextStep, getPageUrl, whenDomReady } from "./guest-flow.js";
+import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js";
 
 const RSVP_LABELS = {
     pending: "Awaiting your response",
@@ -28,7 +37,9 @@ const ENVELOPE_TOP_FILTERS = {
     opened: "drop-shadow(0 46px 40px rgba(0, 0, 0, 0.5))"
 };
 
-const RSVP_EXIT_FADE_DURATION_MS = 800;
+const RSVP_EXIT_FADE_DURATION_MS = 800;// Without a valid code the letter is shown first; the pincode dialog follows once its opening lines appeared.
+const PIN_DIALOG_DELAY_MS = 1800;
+const PIN_ERROR_PARAMS = ["pin-error", "retry-after"];
 
 function pad(value) {
     return String(value).padStart(2, "0");
@@ -234,26 +245,106 @@ function setupInviteCta(guest) {
 
     if (ctaLabel instanceof HTMLElement) {
         ctaLabel.textContent = "Continue your journey";
-    }
-}
+    }}
 
 function setupRsvpExitTransition() {
     setupLinkExitTransition({
         matchLink: (link) => link.hasAttribute("data-invite-cta") || pathEndsWith(link.getAttribute("href"), "/rsvp"),
         getDelayMs: () => runRevealExitSequence({
-            fadeDurationMs: RSVP_EXIT_FADE_DURATION_MS
+            fadeDurationMs: RSVP_EXIT_FADE_DURATION_MS,
+            getDelayMs: getRandomExitDelayMs
         })
     });
 }
 
-async function initInvitePage(data) {
-    const invitationRoot = document.getElementById("invitation-root");
+function applyGuest(guest) {
+    renderInvitationData(guest);
+    startCountdown(guest.eventDate);
+    setupInviteCta(guest);
+}
 
-    renderInvitationData(data);
-    startCountdown(data.eventDate);
+// Error handed over by the home page (?pin-error=unknown|sealed&retry-after=N); removed from the URL.
+function readPinErrorFromUrl() {
+    const url = new URL(window.location.href);
+    const kind = url.searchParams.get("pin-error");
+    const retryAfter = Number(url.searchParams.get("retry-after")) || null;
+
+    if (PIN_ERROR_PARAMS.some((param) => url.searchParams.has(param))) {
+        PIN_ERROR_PARAMS.forEach((param) => url.searchParams.delete(param));
+        window.history.replaceState(window.history.state, "", url.href);
+    }
+
+    return kind ? getPinErrorMessage(kind, retryAfter) : "";
+}
+
+// Resolves with { guest } for a valid code, or with the options for the pincode dialog.
+async function resolveGuest() {
+    const linkedCode = readGuestCodeFromUrl();
+    removeGuestCodeFromUrl();
+    const pinErrorMessage = readPinErrorFromUrl();
+    const candidateCode = linkedCode ?? getStoredGuestCode();
+
+    if (!candidateCode) {
+        return { guest: null, dialog: { message: pinErrorMessage } };
+    }
+
+    try {
+        return { guest: await verifyGuestCode(candidateCode) };
+    } catch (error) {
+        const kind = getPinErrorKind(error);
+
+        if (kind === "unknown" && linkedCode === null) {
+            clearGuestCode();
+        }
+
+        if (kind === "network") {
+            // Keep the code so one tap on "Try again" is enough.
+            return { guest: null, dialog: { message: getPinErrorMessage(kind), prefill: candidateCode, canRetry: true } };
+        }
+
+        return { guest: null, dialog: { message: getPinErrorMessage(kind, error?.retryAfterSeconds) } };
+    }
+}
+
+function fadeInGuestName(guest) {
+    const guestNameEl = document.getElementById("guest-name");
+
+    if (!guestNameEl) {
+        applyGuest(guest);
+        return Promise.resolve();
+    }
+
+    guestNameEl.classList.add("opacity-0");
+
+    return new Promise((resolve) => {
+        window.setTimeout(() => {
+            applyGuest(guest);
+            guestNameEl.classList.remove("opacity-0");
+            resolve();
+        }, 700);
+    });
+}
+
+async function initInvitePage(guestResultPromise) {
+    const invitationRoot = document.getElementById("invitation-root");
+    const mainEl = document.querySelector("main");
+
     createSnowParticles();
 
-    await playInviteEnvelopeLoader();
+    // The envelope always comes first; the code check runs meanwhile.
+    const [result] = await Promise.all([
+        guestResultPromise.then((value) => {
+            if (value.guest) {
+                applyGuest(value.guest);
+            } else if (mainEl) {
+                // Nothing on the letter may be used until the password is given.
+                mainEl.inert = true;
+            }
+
+            return value;
+        }),
+        playInviteEnvelopeLoader()
+    ]);
 
     if (invitationRoot) {
         invitationRoot.classList.remove("opacity-0");
@@ -263,20 +354,29 @@ async function initInvitePage(data) {
     window.requestAnimationFrame(() => {
         revealInvitationContent();
     });
-}
 
-async function bootstrapInvitePage() {
-    const guest = await guardPage("invite");
-
-    if (!guest) {
+    if (result.guest) {
         return;
     }
 
+    await new Promise((resolve) => window.setTimeout(resolve, PIN_DIALOG_DELAY_MS));
+
+    const guest = await openPinDialog(result.dialog);
+
+    if (mainEl) {
+        mainEl.inert = false;
+    }
+
+    await fadeInGuestName(guest);
+}
+
+async function bootstrapInvitePage() {
+    const guestResultPromise = resolveGuest();
+
     await whenDomReady();
     lockInitialViewportHeight();
-    setupInviteCta(guest);
     setupRsvpExitTransition();
-    void initInvitePage(guest);
+    void initInvitePage(guestResultPromise);
 }
 
 void bootstrapInvitePage();
