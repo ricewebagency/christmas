@@ -138,6 +138,9 @@ function initEntryForm({ message = '', prefill = '' } = {}) {
     form.classList.remove('hidden');
     form.classList.add('flex');
 
+    // Code check is over: bring the burnt paper back (set by home-preflight.js).
+    document.documentElement.removeAttribute('data-home-checking');
+
     input.value = digitsOnly(prefill);
     setMessage(message);
     syncBoxes();

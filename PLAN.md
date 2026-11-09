@@ -16,9 +16,9 @@ Een gast die de site opnieuw opent, komt op de juiste plek uit en verliest geen 
 1. **De server is de bron van waarheid.** localStorage is alleen een cache, zodat gasten ook op een ander apparaat herkend worden.
 2. **Toegang via een gastcode.** Er is geen login met e-mail of wachtwoord.
    - **Formaat:** een pincode van 4 cijfers (`0000`–`9999`), altijd als string, zodat voorloopnullen behouden blijven. Spaties worden genegeerd.
-   - **Via de link:** `https://riceweb.nl/magical-winter-banquet/?code=4827` slaat het invoerscherm over.
+   - **Via de link:** `https://riceweb.nl/christmas/?code=4827` slaat het invoerscherm over.
    - **Handmatig:** zonder code, of met een ongeldige code, toont de hoofdpagina een invoerscherm ("Speak the password to enter the Great Hall").
-   - **Onthouden:** een geldige code wordt bewaard in localStorage (`magical-winter-banquet.guest-code`). Een volgend bezoek werkt dan zonder code.
+   - **Onthouden:** een geldige code wordt bewaard in localStorage (`christmas-at-the-great-hall.guest-code`). Een volgend bezoek werkt dan zonder code.
    - **Directe links naar pagina's:** elke pagina zonder geldige bewaarde code stuurt door naar de hoofdpagina (het invoerscherm).
    - **Ongeldige bewaarde code** (API geeft 404): de code wordt gewist en de gast gaat naar het invoerscherm.
    - **"Not you?"** op `/map/` wist de code en gaat naar het invoerscherm.
@@ -26,7 +26,7 @@ Een gast die de site opnieuw opent, komt op de juiste plek uit en verliest geen 
 3. **RSVP-statussen:** `pending` | `accepted` | `declined` (overal hetzelfde, ook in de API).
 4. **House is onveranderlijk** na het sorteren.
 5. **Wijzigdeadline** (`changeDeadline`) komt uit de API: **17 december 2026, 23:59 (Europe/Amsterdam)**. Daarna staat alles vast (`canChange: false`).
-6. **Productie-URL:** `https://riceweb.nl/magical-winter-banquet/`. De site draait in een subpad, dus alle redirects en links blijven relatief (`./map/`, `../cabin/`) of worden opgebouwd vanaf een basispad. Gebruik nooit absolute paden zoals `/map/`.
+6. **Productie-URL:** `https://riceweb.nl/christmas/`. De site draait in een subpad, dus alle redirects en links blijven relatief (`./map/`, `../cabin/`) of worden opgebouwd vanaf een basispad. Gebruik nooit absolute paden zoals `/map/`.
 7. **Afgemelde gasten** krijgen op `/map/` een eigen variant: een bedankje voor de RSVP, "jammer dat je er niet bij kunt zijn" en (als `canChange`) een knop "Change your response". Geen gerechten, geen house-details en geen kaart.
 8. **Mock-modus blijft bestaan.** Als `API_BASE_URL` leeg is, gebruikt `api-client.js` een mock die zijn state in localStorage bewaart. Zo kan de frontend gebouwd en getest worden voordat de API klaar is.
 
@@ -81,7 +81,7 @@ Elke pagina roept bij het laden `guardPage('<pagina>')` aan. Als de gast op een 
 - [x] `fetchTakenCabinDishIds()` → `GET /api/guests/{code}/dishes/taken` (exclusief eigen gerechten).
 - [x] `fetchDishCatalog()` → `GET /api/dishes`, met fallback op `assets/files/dishes.json`.
 - [x] Bestaande functies (`getInvitationData`, `getCabinData`, `fetchCabinDishSelection`) worden wrappers rond `getGuest()`, zodat de pagina's weinig hoeven te veranderen.
-- [x] Mock die state bewaart in localStorage (`magical-winter-banquet.mock-guest`).
+- [x] Mock die state bewaart in localStorage (`christmas-at-the-great-hall.mock-guest`).
 - [x] Uniforme foutafhandeling: `ApiError { status, code, message }`.
 
 ### 2. Flow-module (`src/js/guest-flow.js`, nieuw)
@@ -159,9 +159,9 @@ Elke pagina roept bij het laden `guardPage('<pagina>')` aan. Als de gast op een 
 
 ## Besluiten
 - Deadline: 17 december 2026, 23:59 (Europe/Amsterdam).
-- Productie-URL: `https://riceweb.nl/magical-winter-banquet/`.
+- Productie-URL: `https://riceweb.nl/christmas/`.
 - Afgemelde gasten zien geen gerechten of kaart, wel de afgemeld-variant van `/map/`.
-- Gastcodes worden aangemaakt via het admin-endpoint (zie `API_PLAN.md`). De uitnodigingslink is `https://riceweb.nl/magical-winter-banquet/?code=1234`.
+- Gastcodes worden aangemaakt via het admin-endpoint (zie `API_PLAN.md`). De uitnodigingslink is `https://riceweb.nl/christmas/?code=1234`.
 - Gastcode = een pincode van 4 cijfers. Het risico van raden wordt geaccepteerd en beperkt door een strenge rate limit in de API (5 fouten per uur per IP).
 - Toegang alleen via een gastcode (via de link of handmatig). Geen login met e-mail of wachtwoord.
 - De mock accepteert alleen pincode `2412`. Elke andere code geeft in de mock een 404. De mock simuleert ook een 429 na 5 foute pogingen.

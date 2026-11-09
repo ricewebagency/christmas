@@ -2,7 +2,7 @@ import { getGuest, getInvitationData, isApiError, sendSortingHouseResult } from 
 import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js';
 import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js';
 
-const STORAGE_KEY = 'magical-winter-banquet.sorting-hat';
+const STORAGE_KEY = 'christmas-at-the-great-hall.sorting-hat';
 const HOUSE_ORDER = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const QUESTIONS_URL = new URL('../assets/files/sorting-hat-questions.json', import.meta.url);
 const SORTING_HAT_SUBTITLES_URL = new URL('../assets/files/sorting-hat-subtitles.json', import.meta.url);

@@ -7,7 +7,7 @@
     <title>Christmas at the Great Hall | Invitation</title>
     <meta name="description"
         content="An invitation to Christmas at the Great Hall, with all event details and RSVP information in one place.">
-    <meta name="author" content="Magical Winter Banquet">
+    <meta name="author" content="Christmas at the Great Hall">
     <meta name="application-name" content="Christmas at the Great Hall">
     <meta name="theme-color" content="#1a120f">
     <meta name="color-scheme" content="dark light">
@@ -37,7 +37,9 @@
     <meta name="twitter:image" content="./assets/images/the-great-hall.png">
     <meta name="twitter:image:alt" content="The Great Hall lit by floating candles and a festive feast.">
 
+    <script src="./js/home-preflight.js"></script>
     <link rel="stylesheet" href="./css/main.css">
+    <script src="./js/audio-toggle.js"></script>
     <script type="module" src="./js/home.js"></script>
     <script src="./js/background-audio.js" defer></script>
 </head>
@@ -47,12 +49,12 @@
         <source src="./assets/music/diagon-alley.mp3" type="audio/mp3">
     </audio>
     <div aria-hidden="true"
-        class="pointer-events-none absolute inset-0 z-0 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center bg-no-repeat">
+        class="pointer-events-none absolute inset-0 z-0 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center bg-no-repeat transition-opacity duration-700 [html[data-home-checking]_&]:opacity-0">
     </div>
 
     <main class="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 font-inkpot text-charcoal sm:px-6">
         <!-- Shown while a stored or linked code is checked; delayed so quick redirects don't flash it. -->
-        <p data-home-loading class="animate-fadeIn800 text-lg italic text-charcoal/80">The castle doors are opening&hellip;</p>
+        <p data-home-loading class="animate-fadeIn800 text-lg italic text-charcoal/80 [html[data-home-checking]_&]:text-amber-100/70">The castle doors are opening&hellip;</p>
 
         <form data-home-form novalidate
             class="hidden w-full max-w-md flex-col items-center gap-8 text-center animate-fadeIn1000">

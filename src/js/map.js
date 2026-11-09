@@ -136,7 +136,7 @@ function renderEventDetails(guest) {
         ? `Christmas Eve, ${DATE_FORMAT.format(eventDate)}`
         : DATE_FORMAT.format(eventDate);
 
-    setLines(whenEl, [dateLabel, `Doors open at ${TIME_FORMAT.format(eventDate)}`]);
+    setLines(whenEl, [dateLabel, `(from ${TIME_FORMAT.format(eventDate)})`]);
 }
 
 // Maps dish id -> { name, course } in catalog order.

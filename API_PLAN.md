@@ -1,6 +1,6 @@
-# API_PLAN — Magical Winter Banquet API (Azure Function App)
+# API_PLAN — Christmas at the Great Hall API (Azure Function App)
 
-Backend voor de frontend in `MagicalWinterBanquet.Web`. De frontend is statisch, dus alle state staat in deze API.
+Backend voor de frontend in `ChristmasAtTheGreatHall.Web`. De frontend is statisch, dus alle state staat in deze API.
 
 ## Aannames (aanpassen indien nodig)
 - **Runtime:** C# / .NET (huidige LTS), Azure Functions **isolated worker**, HTTP triggers.
@@ -12,7 +12,7 @@ Backend voor de frontend in `MagicalWinterBanquet.Web`. De frontend is statisch,
 - **Risico (geaccepteerd):** 10.000 combinaties zijn te raden. Bij ~40 gasten is grofweg 1 op de 250 pogingen raak. De strenge rate limit (zie hieronder) maakt dat traag, maar een vastberaden persoon met meerdere IP's komt er uiteindelijk doorheen. Acceptabel voor een kerstdiner. Er zijn geen gevoelige gegevens; het ergste geval is een gewijzigde RSVP of gerechtkeuze.
 - **Auth admin:** `AuthorizationLevel.Function` (function key); alleen voor de organisator.
 - **CORS:** `https://riceweb.nl` (een origin bevat geen pad) + lokale dev-origin(s).
-- **Frontend:** `https://riceweb.nl/magical-winter-banquet/`. Uitnodigingslink: `https://riceweb.nl/magical-winter-banquet/?code=1234`.
+- **Frontend:** `https://riceweb.nl/christmas/`. Uitnodigingslink: `https://riceweb.nl/christmas/?code=1234`.
 - **Tijdzone:** alle datums met offset (Europe/Amsterdam, `+01:00` in december).
 
 ## Domeinmodel
@@ -38,11 +38,11 @@ Claimen = `AddEntity` → faalt met 409 als een ander het al heeft. Dat is atoma
 - `Event__Date` (ISO, bv. `2026-12-24T18:00:00+01:00`)
 - `Event__Location` (`Assendelft`)
 - `Event__ChangeDeadline` = `2026-12-17T23:59:59+01:00`
-- `Frontend__BaseUrl` = `https://riceweb.nl/magical-winter-banquet` (zonder trailing slash; gebruikt voor uitnodigingslinks)
+- `Frontend__BaseUrl` = `https://riceweb.nl/christmas` (zonder trailing slash; gebruikt voor uitnodigingslinks)
 - CORS (platform-instelling van de Function App): `https://riceweb.nl`
 
 ### Dish catalog
-`dishes.json` als embedded resource (kopie van `MagicalWinterBanquet.Web/src/assets/files/dishes.json`). Structuur: lijst van courses `{ course, course_nl, dishes: [{ id, name, name_nl, description }] }`. Ids zijn numeriek in JSON; de API behandelt ze als **string**.
+`dishes.json` als embedded resource (kopie van `ChristmasAtTheGreatHall.Web/src/assets/files/dishes.json`). Structuur: lijst van courses `{ course, course_nl, dishes: [{ id, name, name_nl, description }] }`. Ids zijn numeriek in JSON; de API behandelt ze als **string**.
 
 ## Tabellen
 - `Guests` — `PartitionKey = "guest"`, `RowKey = code`. Arrays/objecten als JSON-string kolom.
@@ -136,7 +136,7 @@ Verwerking (diff):
 
 ## Projectstructuur (voorstel)
 ```
-MagicalWinterBanquet.Api/
+ChristmasAtTheGreatHall.Api/
   Program.cs                      // DI, TableServiceClient, options, CORS-config
   Options/EventOptions.cs
   Models/Guest.cs, GuestState.cs, RsvpStatus.cs, House.cs, Requests/*.cs, ApiError.cs
@@ -153,13 +153,13 @@ MagicalWinterBanquet.Api/
   Functions/AdminFunctions.cs
   Http/HttpResults.cs             // JSON helpers + foutformaat
   Resources/dishes.json           // embedded
-MagicalWinterBanquet.Api.Tests/   // xUnit, GuestService met in-memory repos
+ChristmasAtTheGreatHall.Api.Tests/   // xUnit, GuestService met in-memory repos
 ```
 Regels horen in `GuestService`, niet in de functions. `TimeProvider` injecteren zodat de deadline testbaar is.
 
 ## Infra / config
 - Function App (Consumption of Flex Consumption), Storage Account (Tables in dezelfde account mag).
-- App settings: `Event__Date` (`2026-12-24T18:00:00+01:00`), `Event__Location` (`Assendelft`), `Event__ChangeDeadline` (`2026-12-17T23:59:59+01:00`), `Frontend__BaseUrl` (`https://riceweb.nl/magical-winter-banquet`), `RateLimit__MaxFailedAttempts` (5), `RateLimit__WindowMinutes` (60), `RateLimit__BlockMinutes` (60), `RateLimit__GlobalMaxFailedAttempts` (100), `TableStorage__ConnectionString` (of managed identity + `TableStorage__ServiceUri`).
+- App settings: `Event__Date` (`2026-12-24T18:00:00+01:00`), `Event__Location` (`Assendelft`), `Event__ChangeDeadline` (`2026-12-17T23:59:59+01:00`), `Frontend__BaseUrl` (`https://riceweb.nl/christmas`), `RateLimit__MaxFailedAttempts` (5), `RateLimit__WindowMinutes` (60), `RateLimit__BlockMinutes` (60), `RateLimit__GlobalMaxFailedAttempts` (100), `TableStorage__ConnectionString` (of managed identity + `TableStorage__ServiceUri`).
 - CORS in de Function App instellen op `https://riceweb.nl` (plus lokale dev-origin); geen `*`.
 - Lokaal: Azurite + `local.settings.json` (niet committen).
 
@@ -168,7 +168,7 @@ Regels horen in `GuestService`, niet in de functions. `TimeProvider` injecteren 
 Gebruik deze prompts op volgorde in het API-project (met dit bestand in de repo).
 
 **1 — Scaffold**
-> Lees `API_PLAN.md`. Maak een Azure Functions-project (.NET LTS, isolated worker) `MagicalWinterBanquet.Api` plus testproject `MagicalWinterBanquet.Api.Tests` (xUnit) volgens de projectstructuur. Zet `Program.cs` op met DI, `EventOptions` (gebonden aan `Event`-sectie), `TableServiceClient`, `TimeProvider.System`. Voeg `local.settings.json.example` toe met alle settings en Azurite. Nog geen endpoints.
+> Lees `API_PLAN.md`. Maak een Azure Functions-project (.NET LTS, isolated worker) `ChristmasAtTheGreatHall.Api` plus testproject `ChristmasAtTheGreatHall.Api.Tests` (xUnit) volgens de projectstructuur. Zet `Program.cs` op met DI, `EventOptions` (gebonden aan `Event`-sectie), `TableServiceClient`, `TimeProvider.System`. Voeg `local.settings.json.example` toe met alle settings en Azurite. Nog geen endpoints.
 
 **2 — Domein & opslag**
 > Implementeer volgens `API_PLAN.md` de modellen (`Guest`, `GuestState`, enums met lowercase JSON-serialisatie), `GuestEntity`/`DishClaimEntity`, en de Table Storage-repositories. `DishClaimRepository.TryClaimAsync` gebruikt `AddEntity` en geeft `false` bij 409. Voeg `EmbeddedDishCatalog` toe (embedded `Resources/dishes.json`, ids als string). Voeg `GuestCodeGenerator` toe (een pincode van 4 cijfers via `RandomNumberGenerator`, botsingscheck, voorspelbare pincodes overslaan volgens het plan) plus een statische `GuestCode`-helper: `Normalize` (spaties eruit) en `IsValid` (`^[0-9]{4}$`, als string). Voeg `AccessAttemptEntity` toe.

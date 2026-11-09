@@ -4,7 +4,10 @@ import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStora
 // Local dev origins (localhost/127.0.0.1:8000) must be in the Function App's CORS list.
 export const API_BASE_URL = 'https://magicalwinterbanquetapi20261108231610-btbjadbzavbybubk.westeurope-01.azurewebsites.net';
 
-const GUEST_CODE_STORAGE_KEY = 'magical-winter-banquet.guest-code';
+const GUEST_CODE_STORAGE_KEY = 'christmas-at-the-great-hall.guest-code';
+// Read by audio-toggle.js (classic script) to show the admin button; keep the key in sync there.
+const GUEST_ADMIN_STORAGE_KEY = 'christmas-at-the-great-hall.guest-is-admin';
+const GUEST_ADMIN_EVENT = 'guest-admin-change';
 const GUEST_CODE_PATTERN = /^[0-9]{4}$/;
 const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const RSVP_STATUSES = ['pending', 'accepted', 'declined'];
@@ -49,7 +52,18 @@ export function setGuestCode(code) {
 
 export function clearGuestCode() {
     removeLocalStorageItem(GUEST_CODE_STORAGE_KEY);
+    rememberGuestAdmin(false);
     guestPromise = null;
+}
+
+function rememberGuestAdmin(isAdmin) {
+    if (isAdmin) {
+        writeJsonToLocalStorage(GUEST_ADMIN_STORAGE_KEY, true);
+    } else {
+        removeLocalStorageItem(GUEST_ADMIN_STORAGE_KEY);
+    }
+
+    window.dispatchEvent(new CustomEvent(GUEST_ADMIN_EVENT, { detail: { isAdmin } }));
 }
 
 // Raw ?code value (may be invalid), or null when absent.
@@ -115,7 +129,8 @@ function normalizeGuestState(data = {}) {
         department: house,
         dishIds: normalizeDishIds(data.dishIds),
         changeDeadline: data.changeDeadline ?? null,
-        canChange: Boolean(data.canChange)
+        canChange: Boolean(data.canChange),
+        isAdmin: Boolean(data.isAdmin)
     };
 }
 
@@ -191,6 +206,7 @@ let guestPromise = null;
 
 function cacheGuest(data) {
     const guest = normalizeGuestState(data);
+    rememberGuestAdmin(guest.isAdmin);
     guestPromise = Promise.resolve(guest);
     return guest;
 }
@@ -206,7 +222,9 @@ export function getGuest({ refresh = false } = {}) {
     if (!guestPromise || refresh) {
         const pending = (async () => {
             const code = requireGuestCode();
-            return normalizeGuestState(await getBackend().getGuest(code));
+            const guest = normalizeGuestState(await getBackend().getGuest(code));
+            rememberGuestAdmin(guest.isAdmin);
+            return guest;
         })();
 
         guestPromise = pending;
@@ -325,8 +343,8 @@ export async function fetchCabinDishSelection() {
 // ---------- Mock backend (API_BASE_URL empty) ----------
 // Only pin 2412 exists. 5 wrong codes within an hour block for an hour (clear localStorage to reset).
 
-const MOCK_GUEST_STORAGE_KEY = 'magical-winter-banquet.mock-guest';
-const MOCK_ACCESS_STORAGE_KEY = 'magical-winter-banquet.mock-access-attempts';
+const MOCK_GUEST_STORAGE_KEY = 'christmas-at-the-great-hall.mock-guest';
+const MOCK_ACCESS_STORAGE_KEY = 'christmas-at-the-great-hall.mock-access-attempts';
 const MOCK_GUEST_CODE = '2412';
 const MOCK_EVENT = {
     guestName: 'Maurice van Dorst',
@@ -401,7 +419,8 @@ function toMockGuestState(guest) {
         house: guest.house,
         dishIds: [...guest.dishIds],
         changeDeadline: MOCK_EVENT.changeDeadline,
-        canChange: mockCanChange()
+        canChange: mockCanChange(),
+        isAdmin: false
     };
 }
 

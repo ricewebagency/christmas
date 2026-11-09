@@ -1,7 +1,8 @@
-import { API_BASE_URL } from './api-client.js';
+import { API_BASE_URL, getStoredGuestCode } from './api-client.js';
 import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js';
 
-const SETTINGS_STORAGE_KEY = 'magical-winter-banquet.manage-settings';
+const SETTINGS_STORAGE_KEY = 'christmas-at-the-great-hall.manage-settings';
+const DISHES_VIEW_STORAGE_KEY = 'christmas-at-the-great-hall.manage-dishes-view';
 const STATIC_DISH_CATALOG_URL = new URL('../assets/files/dishes.json', import.meta.url);
 const TIME_ZONE = 'Europe/Amsterdam';
 
@@ -40,7 +41,13 @@ const state = {
     totalsRendered: false,
     dishesRendered: false,
     renderedCodes: new Set(),
-    highlightCode: null
+    highlightCode: null,
+    // Opengeklapte gastrijen; blijft behouden bij opnieuw renderen.
+    expandedCodes: new Set(),
+    expandedCourses: new Set(),
+    dishesFreeOnly: false,
+    // Open gangen van vóór "Alleen vrije gerechten", om bij uitzetten te herstellen.
+    expandedBeforeFreeOnly: null
 };
 
 const previousCounts = new Map();
@@ -108,8 +115,8 @@ function num(key, value) {
 function renderSkeleton() {
     const pulse = 'motion-safe:animate-pulse border border-neutral-800';
     el('manage-totals').innerHTML = ['min-w-64', 'min-w-40', 'min-w-32', 'min-w-48'].map((width) => `<div class="h-[52px] flex-auto rounded-md bg-neutral-900 ${width} ${pulse}"></div>`).join('');
-    el('manage-guest-list').innerHTML = Array.from({ length: 6 }, () => `<div class="h-56 rounded-lg bg-neutral-950 ${pulse}"></div>`).join('');
-    el('manage-dishes').innerHTML = Array.from({ length: 3 }, () => `<div class="h-24 rounded-md bg-neutral-950 ${pulse}"></div>`).join('');
+    el('manage-guest-list').innerHTML = Array.from({ length: 8 }, () => '<div class="h-12 bg-neutral-950/40 motion-safe:animate-pulse"></div>').join('');
+    el('manage-dishes').innerHTML = Array.from({ length: 3 }, () => `<div class="h-10 rounded-md bg-neutral-950 ${pulse}"></div>`).join('');
 }
 
 // ---------- Helpers ----------
@@ -195,29 +202,44 @@ function showMessage(text, tone = 'info') {
     toast.dataset.timer = String(setTimeout(() => dismissToast(toast), TOAST_DURATION[tone] ?? TOAST_DURATION.info));
 }
 
-function setSettingsOpen(open) {
-    el('manage-settings').classList.toggle('hidden', !open);
-    el('manage-settings-toggle').setAttribute('aria-expanded', String(open));
+const POPOVERS = {
+    settings: { panel: 'manage-settings', toggle: 'manage-settings-toggle', focus: 'manage-base-url' },
+    filters: { panel: 'manage-filters', toggle: 'manage-filters-toggle', focus: 'manage-filter-rsvp' }
+};
+
+function setPopoverOpen(popover, open) {
+    el(popover.panel).classList.toggle('hidden', !open);
+    el(popover.toggle).setAttribute('aria-expanded', String(open));
 
     if (open) {
-        el('manage-base-url').focus();
+        el(popover.focus).focus();
     }
 }
 
-function handleSettingsDismiss(event) {
-    const panel = el('manage-settings');
+function togglePopover(popover) {
+    setPopoverOpen(popover, el(popover.panel).classList.contains('hidden'));
+}
 
-    if (panel.classList.contains('hidden')) {
-        return;
-    }
+function setSettingsOpen(open) {
+    setPopoverOpen(POPOVERS.settings, open);
+}
 
-    const outside = event.type === 'pointerdown'
-        && !panel.contains(event.target)
-        && !el('manage-settings-toggle').contains(event.target);
+function handlePopoverDismiss(event) {
+    Object.values(POPOVERS).forEach((popover) => {
+        const panel = el(popover.panel);
 
-    if (outside || event.key === 'Escape') {
-        setSettingsOpen(false);
-    }
+        if (panel.classList.contains('hidden')) {
+            return;
+        }
+
+        const outside = event.type === 'pointerdown'
+            && !panel.contains(event.target)
+            && !el(popover.toggle).contains(event.target);
+
+        if (outside || event.key === 'Escape') {
+            setPopoverOpen(popover, false);
+        }
+    });
 }
 
 function setSyncStatus(status) {
@@ -311,8 +333,11 @@ async function request(method, path, body) {
 
     const headers = {};
 
-    if (state.settings.key) {
-        headers.Authorization = `Bearer ${state.settings.key}`;
+    // Geen sleutel ingesteld: de pincode van een admin-gast werkt ook.
+    const key = state.settings.key || getStoredGuestCode();
+
+    if (key) {
+        headers.Authorization = `Bearer ${key}`;
     }
 
     if (body !== undefined) {
@@ -346,7 +371,7 @@ async function request(method, path, body) {
 
     if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-            throw new Error(`Geen toegang (${response.status}). Controleer de hoofdsleutel of admin-token.`);
+            throw new Error(`Geen toegang (${response.status}). Controleer de hoofdsleutel of admin-token, of vraag of je pincode adminrechten heeft.`);
         }
 
         throw new Error(data?.message || data?.error || `Request mislukt: ${response.status}`);
@@ -405,7 +430,8 @@ function normalizeGuest(guest) {
         rsvpUpdatedAt: guest?.rsvpUpdatedAt ?? null,
         sortedAt: guest?.sortedAt ?? null,
         dishesUpdatedAt: guest?.dishesUpdatedAt ?? null,
-        createdAt: guest?.createdAt ?? null
+        createdAt: guest?.createdAt ?? null,
+        isAdmin: Boolean(guest?.isAdmin)
     };
 }
 
@@ -537,64 +563,142 @@ function guestDate(label, value) {
         </div>`;
 }
 
-function renderGuestCard(guest) {
-    const dishes = guest.dishes.length
+const ICONS = {
+    chevron: '<path d="m9 18 6-6-6-6" />',
+    dish: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />',
+    open: '<path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />',
+    reset: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" />',
+    delete: '<path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
+    check: '<path d="M20 6 9 17l-5-5" />'
+};
+
+function icon(name, size = 'h-4 w-4') {
+    return `<svg class="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+}
+
+const ICON_BUTTON = 'inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-800 active:scale-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent';
+
+function renderGuestRow(guest) {
+    const code = escapeHtml(guest.code);
+    const name = escapeHtml(guest.guestName);
+    const expanded = state.expandedCodes.has(guest.code);
+    const dishCount = guest.dishes.length;
+    const dishTitle = dishCount
+        ? guest.dishes.map((dish) => `#${dish.id} ${dish.name}`).join('\n')
+        : 'Nog geen gerechten gekozen';
+    const dishes = dishCount
         ? `<ul class="space-y-0.5">${guest.dishes.map((dish) => `<li><span class="text-neutral-500">#${escapeHtml(dish.id)}</span> ${escapeHtml(dish.name)}</li>`).join('')}</ul>`
         : '<p class="text-neutral-600">Nog geen gerechten gekozen.</p>';
-    const code = escapeHtml(guest.code);
-    const action = 'rounded border border-neutral-700 px-2 py-1 text-center text-xs transition active:scale-90';
 
     return `
-        <article data-guest="${code}" class="flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-950 p-3 transition duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-xl hover:shadow-accent/5">
-            <header class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <h3 class="truncate font-semibold text-neutral-100">${escapeHtml(guest.guestName)}</h3>
-                    <div class="mt-1 flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 font-mono text-accent" title="Pincode">
-                            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <rect x="4" y="11" width="16" height="10" rx="2" />
-                                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                            </svg>${code}
-                        </span>
-                        ${badge(RSVP_BADGES[guest.rsvpStatus] ?? RSVP_BADGES.pending, RSVP_LABELS[guest.rsvpStatus] ?? guest.rsvpStatus)}
+        <article data-guest="${code}" class="transition-colors hover:bg-neutral-800/30">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 sm:flex-nowrap">
+                <button type="button" data-action="toggle-details" data-code="${code}" aria-expanded="${expanded}" aria-controls="guest-details-${code}"
+                    class="group flex min-w-0 flex-1 items-center gap-2 rounded py-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+                    <span class="text-neutral-600 transition-transform group-hover:text-neutral-300 group-aria-expanded:rotate-90">${icon('chevron', 'h-3.5 w-3.5')}</span>
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center">${houseLogo(guest.house)}</span>
+                    <span class="truncate font-medium text-neutral-100">${name}</span>
+                </button>
+                <div class="order-last flex w-full items-center gap-2 pl-[4.375rem] sm:order-none sm:w-auto sm:pl-0">
+                    <span class="w-10 font-mono text-xs text-accent" title="Pincode">${code}</span>
+                    <span class="w-[4.5rem]">${badge(RSVP_BADGES[guest.rsvpStatus] ?? RSVP_BADGES.pending, RSVP_LABELS[guest.rsvpStatus] ?? guest.rsvpStatus)}</span>
+                    <span class="w-14">
+                        <button type="button" data-action="toggle-admin" data-code="${code}" aria-pressed="${guest.isAdmin}"
+                            title="${guest.isAdmin ? 'Admin – klik om in te trekken' : 'Geen admin – klik om admin te maken'}"
+                            class="${BADGE_BASE} transition active:scale-90 ${guest.isAdmin ? 'text-accent ring-accent/40 hover:ring-red-500/40 hover:text-red-400' : 'text-neutral-600 ring-neutral-700 hover:text-accent hover:ring-accent/40'}">${guest.isAdmin ? 'Admin' : '+ Admin'}</button>
+                    </span>
+                    <span class="inline-flex w-9 items-center gap-1 text-xs ${dishCount ? 'text-neutral-300' : 'text-neutral-600'}" title="${escapeHtml(dishTitle)}">${icon('dish', 'h-3.5 w-3.5')}${dishCount}</span>
+                </div>
+                <div class="flex shrink-0 items-center">
+                    <button type="button" data-action="copy-link" data-code="${code}" title="Link kopiëren" aria-label="Link van ${name} kopiëren"
+                        class="${ICON_BUTTON} hover:text-accent">${icon('link')}</button>
+                    <a href="${escapeHtml(guest.inviteUrl)}" target="_blank" rel="noopener" title="Uitnodiging openen" aria-label="Uitnodiging van ${name} openen"
+                        class="${ICON_BUTTON} hover:text-accent">${icon('open')}</a>
+                    <button type="button" data-action="reset" data-code="${code}" title="Resetten" aria-label="${name} resetten"
+                        class="${ICON_BUTTON} hover:text-amber-400">${icon('reset')}</button>
+                    <button type="button" data-action="delete" data-code="${code}" title="Verwijderen" aria-label="${name} verwijderen"
+                        class="${ICON_BUTTON} hover:text-red-400">${icon('delete')}</button>
+                </div>
+            </div>
+            <div id="guest-details-${code}" data-details class="${collapseClass(expanded)}" ${expanded ? '' : 'inert'}>
+                <div class="min-h-0 overflow-hidden">
+                    <div class="grid gap-3 px-3 pb-3 text-xs sm:grid-cols-2 sm:pl-[4.375rem]">
+                        <div>${dishes}</div>
+                        <dl class="max-w-xs space-y-0.5">
+                            ${guestDate('RSVP', guest.rsvpUpdatedAt)}
+                            ${guestDate('Gesorteerd', guest.sortedAt)}
+                            ${guestDate('Gerechten', guest.dishesUpdatedAt)}
+                            ${guestDate('Aangemaakt', guest.createdAt)}
+                        </dl>
                     </div>
                 </div>
-                <div class="shrink-0" title="${escapeHtml(HOUSE_LABELS[guest.house] ?? 'Niet gesorteerd')}">${houseLogo(guest.house, 'h-9 w-9')}</div>
-            </header>
-            <div class="text-xs">${dishes}</div>
-            <dl class="grid grid-cols-1 gap-x-4 gap-y-0.5 border-t border-neutral-800 pt-2 text-xs min-[420px]:grid-cols-2">
-                ${guestDate('RSVP', guest.rsvpUpdatedAt)}
-                ${guestDate('Gesorteerd', guest.sortedAt)}
-                ${guestDate('Gerechten', guest.dishesUpdatedAt)}
-                ${guestDate('Aangemaakt', guest.createdAt)}
-            </dl>
-            <div class="mt-auto grid grid-cols-4 gap-1">
-                <button type="button" data-action="copy-link" data-code="${code}" title="${escapeHtml(guest.inviteUrl)}"
-                    class="${action} hover:border-accent hover:text-accent">Link</button>
-                <a href="${escapeHtml(guest.inviteUrl)}" target="_blank" rel="noopener"
-                    class="${action} hover:border-accent hover:text-accent">Open</a>
-                <button type="button" data-action="reset" data-code="${code}"
-                    class="${action} hover:border-amber-500 hover:text-amber-400">Reset</button>
-                <button type="button" data-action="delete" data-code="${code}"
-                    class="${action} hover:border-red-500 hover:text-red-400">Verwijder</button>
             </div>
         </article>`;
 }
 
-// animateAll: false = alleen nieuwe kaarten animeren (na een refresh).
+// Uitklapblok: animeert hoogte via grid-rows 0fr <-> 1fr (inhoud in een min-h-0 overflow-hidden wrapper).
+const COLLAPSE_BASE = 'grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none';
+
+function collapseClass(open) {
+    return `${COLLAPSE_BASE} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`;
+}
+
+function setCollapsed(node, open) {
+    node.classList.toggle('grid-rows-[1fr]', open);
+    node.classList.toggle('grid-rows-[0fr]', !open);
+    // Dichtgeklapte inhoud niet focusbaar / niet voorgelezen.
+    node.inert = !open;
+}
+
+function toggleDetails(button, code) {
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', String(open));
+    setCollapsed(button.closest('[data-guest]').querySelector('[data-details]'), open);
+    state.expandedCodes[open ? 'add' : 'delete'](code);
+}
+
+function updateFilterCount() {
+    const active = ['manage-filter-rsvp', 'manage-filter-house', 'manage-filter-dishes'].filter((id) => el(id).value).length;
+    const badgeEl = el('manage-filter-count');
+    badgeEl.textContent = String(active);
+    badgeEl.classList.toggle('hidden', active === 0);
+}
+
+function clearFilters() {
+    ['manage-filter-rsvp', 'manage-filter-house', 'manage-filter-dishes'].forEach((id) => {
+        el(id).value = '';
+    });
+    renderGuests();
+}
+
+function openCreateDialog() {
+    const dialog = el('manage-create-dialog');
+    // Toasts in de dialog plaatsen, anders vallen ze achter de modal (top layer).
+    dialog.append(el('manage-message'));
+    dialog.showModal();
+    el('manage-create-rows').querySelector('[data-field="name"]')?.focus();
+}
+
+function handleCreateDialogClose() {
+    document.querySelector('main').prepend(el('manage-message'));
+}
+
+// animateAll: false = alleen nieuwe rijen animeren (na een refresh).
 function renderGuests({ animateAll = true } = {}) {
     const guests = getFilteredGuests();
     const list = el('manage-guest-list');
 
     el('manage-guest-count').textContent = `(${guests.length} van ${state.guests.length})`;
+    updateFilterCount();
     list.innerHTML = guests.length
-        ? guests.map(renderGuestCard).join('')
-        : '<p class="col-span-full py-6 text-center text-neutral-500 motion-safe:animate-fadeInUpFast">Geen gasten gevonden.</p>';
+        ? guests.map(renderGuestRow).join('')
+        : '<p class="py-6 text-center text-neutral-500 motion-safe:animate-fadeInUpFast">Geen gasten gevonden.</p>';
 
     const entering = [...list.querySelectorAll('[data-guest]')]
-        .filter((card) => animateAll || !state.renderedCodes.has(card.dataset.guest));
-    entering.forEach((card) => card.classList.add('motion-safe:animate-fadeInUpFast'));
-    stagger(entering);
+        .filter((row) => animateAll || !state.renderedCodes.has(row.dataset.guest));
+    entering.forEach((row) => row.classList.add('motion-safe:animate-fadeInUpFast'));
+    stagger(entering, 20);
 
     if (state.highlightCode) {
         const card = list.querySelector(`[data-guest="${CSS.escape(state.highlightCode)}"]`);
@@ -618,11 +722,135 @@ function getClaimedBy() {
     return claimedBy;
 }
 
+function courseKey(course, index) {
+    return String(course?.course || course?.course_nl || index);
+}
+
+function renderDishItem(dish, guest) {
+    const owner = guest
+        ? `<span class="inline-flex items-center gap-2 text-neutral-100">${escapeHtml(guest.guestName)}${guest.house ? houseLogo(guest.house, 'h-5 w-5') : ''}</span>`
+        : '<span class="text-emerald-400">vrij</span>';
+
+    return `
+        <li class="flex items-center justify-between gap-3 py-1.5 pl-9 pr-3 transition-colors hover:bg-neutral-800/40">
+            <span><span class="text-neutral-500">#${escapeHtml(dish.id)}</span> ${escapeHtml(dish.name_nl || dish.name)}</span>
+            <span class="text-right text-xs">${owner}</span>
+        </li>`;
+}
+
+function renderCourse(course, index, claimedBy) {
+    const key = courseKey(course, index);
+    const dishes = Array.isArray(course?.dishes) ? course.dishes : [];
+    const claimed = dishes.filter((dish) => claimedBy.has(String(dish.id))).length;
+    const full = dishes.length > 0 && claimed === dishes.length;
+    const percent = dishes.length ? Math.round((claimed / dishes.length) * 100) : 0;
+    const expanded = state.expandedCourses.has(key);
+    const visible = state.dishesFreeOnly ? dishes.filter((dish) => !claimedBy.has(String(dish.id))) : dishes;
+    const list = visible.length
+        ? visible.map((dish) => renderDishItem(dish, claimedBy.get(String(dish.id)))).join('')
+        : '<li class="py-1.5 pl-9 pr-3 text-neutral-500">Alles geclaimd.</li>';
+
+    return `
+        <div data-course-key="${escapeHtml(key)}" class="overflow-hidden rounded-md border border-neutral-800">
+            <button type="button" data-course-toggle aria-expanded="${expanded}"
+                class="group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-neutral-800/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+                <span class="text-neutral-600 transition-transform group-hover:text-neutral-300 group-aria-expanded:rotate-90">${icon('chevron', 'h-3.5 w-3.5')}</span>
+                <span class="mr-auto min-w-0 truncate text-xs font-medium uppercase tracking-wide text-neutral-300">${escapeHtml(course?.course_nl || course?.course)}</span>
+                <span aria-hidden="true" class="hidden h-1.5 w-24 overflow-hidden rounded-full bg-neutral-800 sm:block">
+                    <span class="block h-full rounded-full transition-all duration-700 ${full ? 'bg-emerald-500' : 'bg-accent'}" style="width: ${percent}%"></span>
+                </span>
+                <span class="w-24 text-right text-xs ${full ? 'text-emerald-400' : 'text-neutral-400'}">${claimed}/${dishes.length} geclaimd</span>
+            </button>
+            <div data-course-dishes class="${collapseClass(expanded)}" ${expanded ? '' : 'inert'}>
+                <div class="min-h-0 overflow-hidden">
+                    <ul class="divide-y divide-neutral-800 border-t border-neutral-800">${list}</ul>
+                </div>
+            </div>
+        </div>`;
+}
+
+// Weergavevoorkeur (open gangen, filter) per browser onthouden.
+function saveDishesView() {
+    writeJsonToLocalStorage(DISHES_VIEW_STORAGE_KEY, {
+        expanded: [...state.expandedCourses],
+        freeOnly: state.dishesFreeOnly,
+        before: state.expandedBeforeFreeOnly ? [...state.expandedBeforeFreeOnly] : null
+    });
+}
+
+function loadDishesView() {
+    const stored = readJsonFromLocalStorage(DISHES_VIEW_STORAGE_KEY, null);
+
+    if (!stored) {
+        return;
+    }
+
+    state.expandedCourses = new Set(Array.isArray(stored.expanded) ? stored.expanded.map(String) : []);
+    state.dishesFreeOnly = stored.freeOnly === true;
+    state.expandedBeforeFreeOnly = state.dishesFreeOnly && Array.isArray(stored.before) ? new Set(stored.before.map(String)) : null;
+}
+
+// Gangen waar "alles uit/inklappen" op werkt: met filter aan alleen gangen die nog vrije gerechten hebben.
+function relevantCourseKeys(claimedBy = getClaimedBy()) {
+    return state.catalog
+        .map((course, index) => ({ key: courseKey(course, index), dishes: Array.isArray(course?.dishes) ? course.dishes : [] }))
+        .filter(({ dishes }) => !state.dishesFreeOnly || dishes.some((dish) => !claimedBy.has(String(dish.id))))
+        .map(({ key }) => key);
+}
+
+function updateExpandAllButton(claimedBy) {
+    const button = el('manage-dishes-expand');
+    const keys = relevantCourseKeys(claimedBy);
+    const openCount = keys.filter((key) => state.expandedCourses.has(key)).length;
+    const allOpen = keys.length > 0 && openCount === keys.length;
+
+    button.disabled = keys.length === 0;
+    button.setAttribute('aria-expanded', String(allOpen));
+    el('manage-dishes-expand-label').textContent = allOpen ? 'Alles inklappen' : 'Alles uitklappen';
+    button.title = keys.length
+        ? `${openCount} van ${keys.length} gangen open · Tip: Alt+klik op een gang klapt alles in of uit`
+        : 'Geen gangen met vrije gerechten';
+}
+
+function animateOpenedCourses(keys) {
+    keys.forEach((key) => {
+        const items = el('manage-dishes').querySelectorAll(`[data-course-key="${CSS.escape(key)}"] li`);
+        items.forEach((item) => restartAnimation(item, 'motion-safe:animate-fadeInUpFast'));
+        stagger(items, 20, 300);
+    });
+}
+
+// open = true: alle relevante gangen open; false: alles dicht.
+function setAllCourses(open) {
+    const keys = relevantCourseKeys();
+    const opened = open ? keys.filter((key) => !state.expandedCourses.has(key)) : [];
+
+    if (open) {
+        keys.forEach((key) => state.expandedCourses.add(key));
+    } else {
+        state.expandedCourses.clear();
+    }
+
+    saveDishesView();
+
+    // In-place bijwerken (geen re-render), zodat de in/uitklap-animatie zichtbaar is.
+    el('manage-dishes').querySelectorAll('[data-course-key]').forEach((course) => {
+        const isOpen = state.expandedCourses.has(course.dataset.courseKey);
+        course.querySelector('[data-course-toggle]').setAttribute('aria-expanded', String(isOpen));
+        setCollapsed(course.querySelector('[data-course-dishes]'), isOpen);
+    });
+
+    updateExpandAllButton();
+    animateOpenedCourses(opened);
+}
+
 function renderDishes() {
     const claimedBy = getClaimedBy();
     const editButton = el('manage-dishes-edit');
 
     editButton.classList.toggle('hidden', !state.catalogEditable || state.catalogDraft !== null);
+    el('manage-dishes-controls').classList.toggle('hidden', state.catalogDraft !== null || !state.catalog.length);
+    el('manage-dishes-free').setAttribute('aria-pressed', String(state.dishesFreeOnly));
 
     if (state.catalogDraft) {
         renderCatalogEditor(claimedBy);
@@ -635,39 +863,74 @@ function renderDishes() {
     }
 
     const container = el('manage-dishes');
-    container.innerHTML = state.catalog.map((course) => {
-        const dishes = Array.isArray(course?.dishes) ? course.dishes : [];
-        const claimed = dishes.filter((dish) => claimedBy.has(String(dish.id))).length;
-
-        return `
-            <div>
-                <h3 class="mb-1 flex justify-between text-xs uppercase tracking-wide text-neutral-400">
-                    <span>${escapeHtml(course?.course_nl || course?.course)}</span>
-                    <span>${claimed}/${dishes.length} geclaimd</span>
-                </h3>
-                <ul class="divide-y divide-neutral-800 rounded-md border border-neutral-800">
-                    ${dishes.map((dish) => {
-                        const guest = claimedBy.get(String(dish.id));
-                        const owner = guest
-                            ? `<span class="inline-flex items-center gap-2 text-neutral-100">${escapeHtml(guest.guestName)}${guest.house ? houseLogo(guest.house, 'h-5 w-5') : ''}</span>`
-                            : '<span class="text-emerald-400">vrij</span>';
-
-                        return `
-                            <li class="flex items-center justify-between gap-3 px-3 py-1.5 transition-colors hover:bg-neutral-800/40">
-                                <span><span class="text-neutral-500">#${escapeHtml(dish.id)}</span> ${escapeHtml(dish.name_nl || dish.name)}</span>
-                                <span class="text-right text-xs">${owner}</span>
-                            </li>`;
-                    }).join('')}
-                </ul>
-            </div>`;
-    }).join('');
+    container.innerHTML = state.catalog.map((course, index) => renderCourse(course, index, claimedBy)).join('');
+    updateExpandAllButton(claimedBy);
 
     if (!state.dishesRendered) {
         state.dishesRendered = true;
-        const items = container.querySelectorAll('li');
-        items.forEach((item) => item.classList.add('motion-safe:animate-fadeInUpFast'));
-        stagger(items, 25, 600);
+        const courses = container.querySelectorAll('[data-course-key]');
+        courses.forEach((course) => course.classList.add('motion-safe:animate-fadeInUpFast'));
+        stagger(courses, 60);
     }
+}
+
+function toggleCourse(button) {
+    const course = button.closest('[data-course-key]');
+    const key = course.dataset.courseKey;
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    const list = course.querySelector('[data-course-dishes]');
+
+    button.setAttribute('aria-expanded', String(open));
+    setCollapsed(list, open);
+    state.expandedCourses[open ? 'add' : 'delete'](key);
+    saveDishesView();
+    updateExpandAllButton();
+
+    if (open) {
+        animateOpenedCourses([key]);
+    }
+}
+
+function handleDishesClick(event) {
+    const button = event.target.closest('[data-course-toggle]');
+
+    if (!button || state.catalogDraft) {
+        return;
+    }
+
+    // Alt+klik: alle gangen volgen de nieuwe stand van deze gang.
+    if (event.altKey) {
+        setAllCourses(button.getAttribute('aria-expanded') !== 'true');
+        return;
+    }
+
+    toggleCourse(button);
+}
+
+function toggleAllCourses() {
+    const keys = relevantCourseKeys();
+    setAllCourses(!keys.every((key) => state.expandedCourses.has(key)));
+}
+
+function toggleFreeOnly() {
+    if (state.dishesFreeOnly) {
+        // Uitzetten: terug naar de open/dicht-stand van vóór het filter.
+        state.dishesFreeOnly = false;
+        state.expandedCourses = state.expandedBeforeFreeOnly ?? state.expandedCourses;
+        state.expandedBeforeFreeOnly = null;
+        saveDishesView();
+        renderDishes();
+        return;
+    }
+
+    // Aanzetten: alleen gangen met vrije gerechten openklappen.
+    state.expandedBeforeFreeOnly = new Set(state.expandedCourses);
+    state.dishesFreeOnly = true;
+    const keys = relevantCourseKeys();
+    state.expandedCourses = new Set(keys);
+    saveDishesView();
+    renderDishes();
+    animateOpenedCourses(keys);
 }
 
 // ---------- Menu bewerken ----------
@@ -877,15 +1140,42 @@ async function handleTableClick(event) {
         return;
     }
 
+    if (button.dataset.action === 'toggle-details') {
+        toggleDetails(button, guest.code);
+        return;
+    }
+
     if (button.dataset.action === 'copy-link') {
         copyText(guest.inviteUrl);
-        button.textContent = '✓';
-        button.classList.add('border-emerald-500', 'text-emerald-400');
+        button.innerHTML = icon('check');
+        button.classList.add('text-emerald-400');
         restartAnimation(button, 'motion-safe:animate-popIn');
         setTimeout(() => {
-            button.textContent = 'Link';
-            button.classList.remove('border-emerald-500', 'text-emerald-400');
+            button.innerHTML = icon('link');
+            button.classList.remove('text-emerald-400');
         }, 1200);
+        return;
+    }
+
+    if (button.dataset.action === 'toggle-admin') {
+        const path = `/api/manage/guests/${encodeURIComponent(guest.code)}/admin`;
+        state.highlightCode = guest.code;
+
+        if (guest.isAdmin) {
+            if (!window.confirm(`Adminrechten van ${guest.guestName} (${guest.code}) intrekken?`)) {
+                return;
+            }
+
+            await runAction(() => request('DELETE', path), `${guest.guestName} is geen admin meer.`);
+            return;
+        }
+
+        if (!window.confirm(`${guest.guestName} (${guest.code}) admin maken?
+Met de pincode krijgt deze gast toegang tot het beheerscherm.`)) {
+            return;
+        }
+
+        await runAction(() => request('POST', path), `${guest.guestName} is nu admin.`);
         return;
     }
 
@@ -1066,18 +1356,38 @@ function renderCreated() {
 function init() {
     consumeTokenFromHash();
     loadSettings();
+    loadDishesView();
 
     el('manage-refresh').addEventListener('click', loadAll);
-    el('manage-settings-toggle').addEventListener('click', () => setSettingsOpen(el('manage-settings').classList.contains('hidden')));
+    el('manage-settings-toggle').addEventListener('click', () => togglePopover(POPOVERS.settings));
+    el('manage-filters-toggle').addEventListener('click', () => togglePopover(POPOVERS.filters));
+    el('manage-filters-clear').addEventListener('click', clearFilters);
     el('manage-settings').addEventListener('submit', saveSettings);
-    document.addEventListener('pointerdown', handleSettingsDismiss);
-    document.addEventListener('keydown', handleSettingsDismiss);
+    document.addEventListener('pointerdown', handlePopoverDismiss);
+    document.addEventListener('keydown', handlePopoverDismiss);
+    el('manage-create-open').addEventListener('click', openCreateDialog);
+    el('manage-create-close').addEventListener('click', () => el('manage-create-dialog').close());
+    el('manage-create-cancel').addEventListener('click', () => {
+        // Annuleren = ingevulde rijen weggooien en sluiten.
+        resetCreateRows();
+        el('manage-create-dialog').close();
+    });
+    el('manage-create-dialog').addEventListener('close', handleCreateDialogClose);
+    el('manage-create-dialog').addEventListener('click', (event) => {
+        // Klik op de backdrop sluit de dialog.
+        if (event.target === event.currentTarget) {
+            event.currentTarget.close();
+        }
+    });
     el('manage-settings-clear').addEventListener('click', clearSettings);
     el('manage-guest-list').addEventListener('click', handleTableClick);
     el('manage-create').addEventListener('submit', handleCreate);
     el('manage-dishes-edit').addEventListener('click', startCatalogEdit);
     el('manage-dishes').addEventListener('input', handleCatalogInput);
     el('manage-dishes').addEventListener('click', handleCatalogClick);
+    el('manage-dishes').addEventListener('click', handleDishesClick);
+    el('manage-dishes-free').addEventListener('click', toggleFreeOnly);
+    el('manage-dishes-expand').addEventListener('click', toggleAllCourses);
     window.addEventListener('beforeunload', (event) => {
         if (state.catalogDraft && state.catalogDirty) {
             event.preventDefault();
