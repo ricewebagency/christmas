@@ -1,8 +1,8 @@
 // Revelio: the theme party details stay hidden until the guest casts the spell.
 // States on [data-map-reveal-root] (data-spell): hidden -> casting -> revealed.
 // Timings match the revelio* animations in tailwind.config.js.
-import { playMapSound } from './map-sounds.js?v=0d22dc9828';
-import { showSubtitlesFor } from './map-dumbledore.js?v=0d22dc9828';
+import { playMapSound } from './map-sounds.js?v=fd0efeab0f';
+import { showSubtitlesFor } from './map-dumbledore.js?v=fd0efeab0f';
 
 const SPARK_DELAY_MS = 250;
 const REVEAL_DELAY_MS = 1000;
@@ -60,7 +60,8 @@ function burstSparks(layerEl, sigilEl) {
     }
 }
 
-export function initMapReveal() {
+// isFound(): whether the guest already found the Revelio egg (API or this visit); then the details stay revealed.
+export function initMapReveal({ isFound = () => false } = {}) {
     const rootEl = document.querySelector('[data-map-reveal-root]');
     const buttonEl = document.querySelector('[data-map-reveal]');
     const contentEl = document.querySelector('[data-map-reveal-content]');
@@ -75,19 +76,31 @@ export function initMapReveal() {
 
     const later = (callback, delay) => timers.push(window.setTimeout(callback, delay));
 
-    const reveal = () => {
+    // Also covers guests who can't earn points (their finds are never recorded).
+    let hasCast = false;
+
+    const showRevealed = () => {
         setShown(buttonEl, false);
         buttonEl.setAttribute('aria-expanded', 'true');
         setShown(contentEl, true);
         rootEl.dataset.spell = 'revealed';
+    };
+
+    const reveal = () => {
+        showRevealed();
         titleEl?.focus({ preventScroll: true });
     };
+
+    if (isFound()) {
+        showRevealed();
+    }
 
     buttonEl.addEventListener('click', () => {
         if (rootEl.dataset.spell !== 'hidden') {
             return;
         }
 
+        hasCast = true;
         // The spell fades out as the twinkle (ink appearing) takes over.
         playMapSound('spell', 0, { fadeAfterMs: REVEAL_DELAY_MS - 200, fadeMs: 700 });
         playMapSound('revelioVoice');
@@ -105,10 +118,17 @@ export function initMapReveal() {
         later(reveal, REVEAL_DELAY_MS);
     });
 
-    // "Mischief managed" wipes the map: hide the details again for the next opening.
+    // "Mischief managed" wipes the map: hide the details again for the next opening,
+    // unless the guest already knows the spell.
     const reset = () => {
         timers.splice(0).forEach((timer) => window.clearTimeout(timer));
         sparksEl?.replaceChildren();
+
+        if (hasCast || isFound()) {
+            showRevealed();
+            return;
+        }
+
         setShown(contentEl, false);
         setShown(buttonEl, true);
         buttonEl.setAttribute('aria-expanded', 'false');

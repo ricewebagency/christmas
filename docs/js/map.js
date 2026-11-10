@@ -1,12 +1,13 @@
-import { fetchDishCatalog } from './api-client.js?v=0d22dc9828';
-import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=0d22dc9828';
-import { initMapChangesDialog } from './map-changes.js?v=0d22dc9828';
-import { initMapEasterEggs } from './map-easter-eggs.js?v=0d22dc9828';
-import { initMapFootsteps } from './map-footsteps.js?v=0d22dc9828';
-import { initMapHouseCup } from './map-house-cup.js?v=0d22dc9828';
-import { initMapReveal } from './map-reveal.js?v=0d22dc9828';
-import { createEggRewards } from './map-rewards.js?v=0d22dc9828';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=0d22dc9828';
+import { fetchDishCatalog } from './api-client.js?v=fd0efeab0f';
+import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
+import { initMapChangesDialog } from './map-changes.js?v=fd0efeab0f';
+import { initMapEasterEggs } from './map-easter-eggs.js?v=fd0efeab0f';
+import { initMapFinale } from './map-finale.js?v=fd0efeab0f';
+import { initMapFootsteps } from './map-footsteps.js?v=fd0efeab0f';
+import { initMapHouseCup } from './map-house-cup.js?v=fd0efeab0f';
+import { initMapReveal } from './map-reveal.js?v=fd0efeab0f';
+import { createEggRewards } from './map-rewards.js?v=fd0efeab0f';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=fd0efeab0f';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
@@ -78,12 +79,15 @@ function initMap(guest) {
     updateClosedScale(mapEl, scaleEl);
     const footsteps = initMapFootsteps(mapEl);
     const houseCup = initMapHouseCup(guest);
+    // Set up below, once openMap exists.
+    let finale = null;
     const rewards = createEggRewards(guest, {
         onStandings: (points, foundCount) => houseCup?.update(points, foundCount),
-        cup: houseCup
+        cup: houseCup,
+        onAllFound: () => void finale?.play()
     });
     initMapEasterEggs(mapEl, { footsteps, guestName: guest?.guestName, onFound: rewards.found, isFound: rewards.hasFound });
-    const mapReveal = initMapReveal();
+    const mapReveal = initMapReveal({ isFound: () => rewards.hasFound('revelio') });
     preloadMapSounds();
     window.addEventListener('resize', () => updateClosedScale(mapEl, scaleEl));
 
@@ -119,8 +123,8 @@ function initMap(guest) {
     bottomFlapEl?.addEventListener('animationstart', schedulePeekSound);
     bottomFlapEl?.addEventListener('animationiteration', schedulePeekSound);
 
-    openButton?.addEventListener('click', () => {
-        if (isOpening) {
+    const openMap = () => {
+        if (isOpening || ['open', 'closing'].includes(mapEl.dataset.state)) {
             return;
         }
 
@@ -137,7 +141,10 @@ function initMap(guest) {
                 });
             });
         }, getRemainingPeekMs(bottomFlapEl));
-    });
+    };
+
+    openButton?.addEventListener('click', openMap);
+    finale = initMapFinale(guest, { mapEl, openMap });
 
     const closeButton = document.querySelector('[data-map-close]');
 

@@ -1,4 +1,4 @@
-import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=0d22dc9828';
+import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
 
 const BASILISK_FRAME_SOURCES = [
     './assets/images/chamber/basilisk-stale-1.png',

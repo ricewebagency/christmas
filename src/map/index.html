@@ -179,10 +179,10 @@
                                 class="absolute inset-x-[26%] inset-y-[8%] short:inset-x-[18%] short:gap-0.5 flex flex-col items-center justify-center gap-1.5 text-center opacity-0 transition-opacity duration-500 ease-out group-data-[state=open]:delay-[2400ms] group-data-[state=open]:duration-[1400ms] group-data-[state=open]:opacity-100 motion-reduce:transition-none">
                                 <!-- Guest name and house (map.js). -->
                                 <hgroup>
-                                    <h2 id="map-guest-name" data-map-guest-name class="text-xl leading-tight">Guest</h2>
+                                    <!-- Once every secret is found, map-finale.js wraps the name in a button that opens the Marauders' note. -->
+                                    <h2 id="map-guest-name" class="text-xl leading-tight"><span data-map-guest-name>Guest</span></h2>
                                     <p data-map-guest-house class="mt-0.5 text-sm italic leading-snug"></p>
-                                </hgroup>
-                                <!-- "Your choices are sealed" after the deadline (map.js); hidden on short screens. Before the deadline the date is in the changes dialog. -->
+                                </hgroup>                                <!-- "Your choices are sealed" after the deadline (map.js); hidden on short screens. Before the deadline the date is in the changes dialog. -->
                                 <div data-map-changes class="hidden flex-col items-center gap-0.5 text-[10px] italic leading-snug text-charcoal/80 short:!hidden">
                                     <p data-map-change-note></p>
                                 </div>
@@ -433,6 +433,42 @@
                     <path d="M6 6l12 12M18 6 6 18" />
                 </svg>
             </button>
+        </div>
+    </dialog>
+
+    <!-- Finale (map-finale.js): the Marauders' note once every secret of the map is found. Light backdrop, so the fireworks show through. -->
+    <dialog id="map-finale-dialog" data-map-finale-dialog lang="en" aria-labelledby="map-finale-name" aria-describedby="map-finale-found"
+        class="max-h-[calc(100dvh-2rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain bg-transparent p-0 font-inkpot text-charcoal [scrollbar-width:none] transition duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-500">
+        <div class="relative">
+            <img src="./assets/images/parchment-cropped.png" alt=""
+                class="pointer-events-none absolute inset-0 h-full w-full select-none object-fill">
+            <div data-map-finale-ink class="relative flex flex-col items-center px-7 pb-8 pt-11 text-center short:px-5 short:pb-5 short:pt-8">
+                <p data-map-finale-not-yet class="mb-4 hidden text-sm italic leading-snug text-charcoal/80 short:mb-2">Mischief managed? Not quite yet&hellip;</p>
+                <p class="text-[11px] uppercase leading-relaxed tracking-[0.2em] text-charcoal/75">Messrs Moony, Wormtail,<br>Padfoot and Prongs</p>
+                <p class="mt-1 text-[10px] italic leading-snug text-charcoal/60">Purveyors of Aids to Magical Mischief-Makers</p>
+                <p class="mt-4 text-sm italic short:mt-2">are proud to present</p>
+                <img data-map-finale-crest alt="" class="mt-3 h-14 w-14 object-contain short:mt-2 short:h-10 short:w-10">
+                <h2 id="map-finale-name" data-map-finale-name class="mt-2 text-3xl leading-tight short:text-2xl">Guest</h2>
+                <p data-map-finale-house class="mt-0.5 text-sm italic leading-snug"></p>
+                <p class="mt-3 text-xl leading-tight short:mt-2 short:text-lg">Honorary Marauder</p>
+                <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                    class="mx-auto mt-2 h-3 w-10 opacity-60">
+                    <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                </svg>
+                <p id="map-finale-found" data-map-finale-found class="mt-2 text-xs italic leading-snug text-charcoal/75"></p>
+                <button data-map-finale-close type="button"
+                    class="group/close mt-4 inline-flex min-h-11 items-center gap-1.5 px-2 text-sm italic text-charcoal/85 transition-[color,transform] duration-200 hover:text-charcoal active:scale-95 focus:outline-none short:mt-2">
+                    <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                        class="h-3 w-8 shrink-0 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100">
+                        <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                    </svg>
+                    <span class="underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 group-hover/close:decoration-charcoal/60 group-focus-visible/close:decoration-charcoal">Mischief managed</span>
+                    <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                        class="h-3 w-8 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100">
+                        <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                    </svg>
+                </button>
+            </div>
         </div>
     </dialog>
 

@@ -2,6 +2,7 @@ import { fetchDishCatalog } from './api-client.js';
 import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js';
 import { initMapChangesDialog } from './map-changes.js';
 import { initMapEasterEggs } from './map-easter-eggs.js';
+import { initMapFinale } from './map-finale.js';
 import { initMapFootsteps } from './map-footsteps.js';
 import { initMapHouseCup } from './map-house-cup.js';
 import { initMapReveal } from './map-reveal.js';
@@ -78,12 +79,15 @@ function initMap(guest) {
     updateClosedScale(mapEl, scaleEl);
     const footsteps = initMapFootsteps(mapEl);
     const houseCup = initMapHouseCup(guest);
+    // Set up below, once openMap exists.
+    let finale = null;
     const rewards = createEggRewards(guest, {
         onStandings: (points, foundCount) => houseCup?.update(points, foundCount),
-        cup: houseCup
+        cup: houseCup,
+        onAllFound: () => void finale?.play()
     });
     initMapEasterEggs(mapEl, { footsteps, guestName: guest?.guestName, onFound: rewards.found, isFound: rewards.hasFound });
-    const mapReveal = initMapReveal();
+    const mapReveal = initMapReveal({ isFound: () => rewards.hasFound('revelio') });
     preloadMapSounds();
     window.addEventListener('resize', () => updateClosedScale(mapEl, scaleEl));
 
@@ -119,8 +123,8 @@ function initMap(guest) {
     bottomFlapEl?.addEventListener('animationstart', schedulePeekSound);
     bottomFlapEl?.addEventListener('animationiteration', schedulePeekSound);
 
-    openButton?.addEventListener('click', () => {
-        if (isOpening) {
+    const openMap = () => {
+        if (isOpening || ['open', 'closing'].includes(mapEl.dataset.state)) {
             return;
         }
 
@@ -137,7 +141,10 @@ function initMap(guest) {
                 });
             });
         }, getRemainingPeekMs(bottomFlapEl));
-    });
+    };
+
+    openButton?.addEventListener('click', openMap);
+    finale = initMapFinale(guest, { mapEl, openMap });
 
     const closeButton = document.querySelector('[data-map-close]');
 

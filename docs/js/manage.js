@@ -1,6 +1,6 @@
-import { API_BASE_URL, getStoredGuestCode } from './api-client.js?v=0d22dc9828';
-import { redirectToPage } from './guest-flow.js?v=0d22dc9828';
-import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=0d22dc9828';
+import { API_BASE_URL, getStoredGuestCode } from './api-client.js?v=fd0efeab0f';
+import { redirectToPage } from './guest-flow.js?v=fd0efeab0f';
+import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=fd0efeab0f';
 
 const SETTINGS_STORAGE_KEY = 'christmas-at-the-great-hall.manage-settings';
 const DISHES_VIEW_STORAGE_KEY = 'christmas-at-the-great-hall.manage-dishes-view';

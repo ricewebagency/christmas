@@ -1,6 +1,6 @@
-import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js?v=0d22dc9828';
-import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=0d22dc9828';
-import { parseRevealDelayMs } from './page-transitions.js?v=0d22dc9828';
+import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js?v=fd0efeab0f';
+import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
+import { parseRevealDelayMs } from './page-transitions.js?v=fd0efeab0f';
 
 const DEFAULT_CABIN_IMAGE = './assets/images/hogwarts-express-cabin-front-gryffindor.png';
 const BACKDROP_SELECTOR = '[data-cabin-backdrop]';

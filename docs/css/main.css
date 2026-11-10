@@ -1046,6 +1046,10 @@ video {
   margin-bottom: 0.25rem;
 }
 
+.mb-4{
+  margin-bottom: 1rem;
+}
+
 .ml-1{
   margin-left: 0.25rem;
 }
@@ -1076,6 +1080,10 @@ video {
 
 .mt-2{
   margin-top: 0.5rem;
+}
+
+.mt-3{
+  margin-top: 0.75rem;
 }
 
 .mt-4{
@@ -1173,6 +1181,10 @@ video {
 
 .h-12{
   height: 3rem;
+}
+
+.h-14{
+  height: 3.5rem;
 }
 
 .h-16{
@@ -2420,6 +2432,10 @@ video {
   background-image: radial-gradient(circle at 50% 30%,rgba(56,24,18,0.78),rgba(6,4,4,0.96) 72%);
 }
 
+.bg-\[radial-gradient\(ellipse_at_50\%_35\%\2c rgba\(12\2c 10\2c 30\2c 0\.45\)\2c rgba\(0\2c 0\2c 0\2c 0\.75\)\)\]{
+  background-image: radial-gradient(ellipse at 50% 35%,rgba(12,10,30,0.45),rgba(0,0,0,0.75));
+}
+
 .bg-\[radial-gradient\(ellipse_at_top\2c rgba\(198\2c 164\2c 90\2c 0\.12\)\2c transparent_65\%\)\]{
   background-image: radial-gradient(ellipse at top,rgba(198,164,90,0.12),transparent 65%);
 }
@@ -2675,6 +2691,11 @@ video {
   padding-right: 1.5rem;
 }
 
+.px-7{
+  padding-left: 1.75rem;
+  padding-right: 1.75rem;
+}
+
 .px-\[10\%\]{
   padding-left: 10%;
   padding-right: 10%;
@@ -2748,6 +2769,10 @@ video {
   padding-bottom: 0.75rem;
 }
 
+.pb-8{
+  padding-bottom: 2rem;
+}
+
 .pb-\[20\%\]{
   padding-bottom: 20%;
 }
@@ -2786,6 +2811,10 @@ video {
 
 .pt-1{
   padding-top: 0.25rem;
+}
+
+.pt-11{
+  padding-top: 2.75rem;
 }
 
 .pt-12{
@@ -2959,6 +2988,10 @@ video {
 
 .leading-tight{
   line-height: 1.25;
+}
+
+.tracking-\[0\.2em\]{
+  letter-spacing: 0.2em;
 }
 
 .tracking-\[0\.32em\]{
@@ -3895,6 +3928,10 @@ body.audio-gate-visible #sorting-main {
   }
 }
 
+.backdrop\:bg-black\/40::backdrop{
+  background-color: rgb(0 0 0 / 0.4);
+}
+
 .backdrop\:bg-black\/60::backdrop{
   background-color: rgb(0 0 0 / 0.6);
 }
@@ -4069,6 +4106,10 @@ body.audio-gate-visible #sorting-main {
 .hover\:text-red-400:hover{
   --tw-text-opacity: 1;
   color: rgb(248 113 113 / var(--tw-text-opacity, 1));
+}
+
+.hover\:decoration-charcoal\/60:hover{
+  text-decoration-color: rgb(43 43 43 / 0.6);
 }
 
 .hover\:opacity-100:hover{
@@ -5019,12 +5060,20 @@ body.audio-gate-visible #sorting-main {
     bottom: 3%;
   }
 
+  .short\:mb-2{
+    margin-bottom: 0.5rem;
+  }
+
   .short\:mt-0\.5{
     margin-top: 0.125rem;
   }
 
   .short\:mt-1{
     margin-top: 0.25rem;
+  }
+
+  .short\:mt-2{
+    margin-top: 0.5rem;
   }
 
   .short\:mt-3{
@@ -5039,6 +5088,10 @@ body.audio-gate-visible #sorting-main {
     display: none;
   }
 
+  .short\:h-10{
+    height: 2.5rem;
+  }
+
   .short\:h-16{
     height: 4rem;
   }
@@ -5049,6 +5102,10 @@ body.audio-gate-visible #sorting-main {
 
   .short\:h-8{
     height: 2rem;
+  }
+
+  .short\:w-10{
+    width: 2.5rem;
   }
 
   .short\:w-16{
@@ -5099,12 +5156,25 @@ body.audio-gate-visible #sorting-main {
     padding-bottom: 0.625rem;
   }
 
+  .short\:pb-5{
+    padding-bottom: 1.25rem;
+  }
+
   .short\:pb-7{
     padding-bottom: 1.75rem;
   }
 
+  .short\:pt-8{
+    padding-top: 2rem;
+  }
+
   .short\:pt-9{
     padding-top: 2.25rem;
+  }
+
+  .short\:text-2xl{
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 
   .short\:text-\[10px\]{

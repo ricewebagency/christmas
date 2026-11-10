@@ -185,7 +185,8 @@ function createBanner() {
 
 // onStandings(allHousePoints, foundCount) runs after every recorded find (also repeat finds), for the House Cup.
 // cup: the House Cup from initMapHouseCup ({ target(), pulse(glow) }), or null when the guest has none.
-export function createEggRewards(guest, { onStandings = () => {}, cup = null } = {}) {
+// onAllFound(result) runs once when the guest finds their last secret (the finale, map-finale.js).
+export function createEggRewards(guest, { onStandings = () => {}, cup = null, onAllFound = () => {} } = {}) {
     const found = new Set(guest?.foundEggIds ?? []);
     const pending = new Set();
     const canEarn = guest?.rsvpStatus === 'accepted' && Boolean(HOUSES[guest?.house]);
@@ -219,7 +220,16 @@ export function createEggRewards(guest, { onStandings = () => {}, cup = null } =
         hintEl.classList.toggle('hidden', !hint);
         srEl.textContent = `Secret ${result.foundCount} of ${result.totalEggs} found${hint ? `: ${hint}` : ''}. ${house.name} has ${result.housePoints} points.`;
 
-        const voiceMs = await speakForEgg({ ...result, house: result.house ?? guest.house }).catch((error) => {
+        // The last secret: the finale starts as Dumbledore says "Mischief managed!", or after the banner if he can't.
+        let finaleStarted = false;
+        const startFinale = () => {
+            if (!finaleStarted && result.foundCount >= result.totalEggs) {
+                finaleStarted = true;
+                onAllFound(result);
+            }
+        };
+
+        const voiceMs = await speakForEgg({ ...result, house: result.house ?? guest.house }, { onLastSentence: startFinale }).catch((error) => {
             console.warn('Dumbledore could not speak.', error);
             return 0;
         });
@@ -237,7 +247,7 @@ export function createEggRewards(guest, { onStandings = () => {}, cup = null } =
                 { opacity: 0, clipPath: INK_SHOWN, filter: 'blur(3px)' }
             ];
         const animation = cardEl.animate(keyframes, { duration: total, fill: 'both' });
-        return animation.finished.catch(() => {});
+        return animation.finished.catch(() => {}).then(startFinale);
     };
 
     const celebrate = (result, point, eggId) => {

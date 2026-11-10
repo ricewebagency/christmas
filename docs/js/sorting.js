@@ -1,6 +1,6 @@
-import { getGuest, getInvitationData, isApiError, sendSortingHouseResult } from './api-client.js?v=0d22dc9828';
-import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js?v=0d22dc9828';
-import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js?v=0d22dc9828';
+import { getGuest, getInvitationData, isApiError, sendSortingHouseResult } from './api-client.js?v=fd0efeab0f';
+import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
+import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js?v=fd0efeab0f';
 
 const STORAGE_KEY = 'christmas-at-the-great-hall.sorting-hat';
 const HOUSE_ORDER = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];

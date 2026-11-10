@@ -1,7 +1,7 @@
 // Dumbledore's voice lines for the easter egg rewards, with subtitles (assets/files/dumbledore-subtitles.json).
 // Which line plays:
-// - Revelio: always its own line;
-// - the first egg a guest finds: 'first-find'; the last one: 'all-found';
+// - Revelio: always its own line (followed by 'all-found' when it's the last one);
+// - the first egg a guest finds: 'first-find'; the last one: 'all-found', which starts the finale (map-finale.js);
 // - the second: 'Ten points to <house>!', right after he told them points are to be earned;
 // - in between: either the line about that egg, or a general one the guest hasn't heard yet
 //   ('Ten points to <house>!' takes turns with the general ones).
@@ -149,7 +149,8 @@ const displayMs = (sentence) => Math.max(sentence.durationMs, MIN_READ_MS + sent
 const sentencesMs = (sentences) => sentences.reduce((sum, sentence) => sum + displayMs(sentence), 0);
 
 // Mid-sequence parts pass { lingerMs: 0, hide: false }, so their last sentence stays up through the pause.
-async function showSubtitles(sentences, token, { lingerMs = LINGER_MS, hide = true } = {}) {
+// onLastSentence runs as the last sentence appears.
+async function showSubtitles(sentences, token, { lingerMs = LINGER_MS, hide = true, onLastSentence = null } = {}) {
     const el = getSubtitleEl();
 
     for (const [index, sentence] of sentences.entries()) {
@@ -159,6 +160,9 @@ async function showSubtitles(sentences, token, { lingerMs = LINGER_MS, hide = tr
 
         el.textContent = sentence.text;
         el.classList.replace('opacity-0', 'opacity-100');
+        if (index === sentences.length - 1) {
+            onLastSentence?.();
+        }
         await wait(displayMs(sentence) + (index === sentences.length - 1 ? lingerMs : 0));
     }
 
@@ -310,7 +314,7 @@ export function speakSpell(spell) {
 
 // Plays the lines one after another. The subtitle timings drive the sequence, so a follow-up still
 // shows its subtitles when the audio is blocked or missing.
-async function speakLines(parts, token) {
+async function speakLines(parts, token, onLastSentence) {
     for (const [index, part] of parts.entries()) {
         if (index > 0) {
             await wait(FOLLOW_UP_PAUSE_MS);
@@ -321,7 +325,7 @@ async function speakLines(parts, token) {
         }
 
         playLine(part.lineId);
-        await showSubtitles(part.sentences, token, index < parts.length - 1 ? { lingerMs: 0, hide: false } : {});
+        await showSubtitles(part.sentences, token, index < parts.length - 1 ? { lingerMs: 0, hide: false } : { onLastSentence });
     }
 }
 
@@ -334,12 +338,15 @@ export async function showSubtitlesFor(lineId) {
 }
 
 // Plays the right line for this find. Resolves (with how long he speaks, in ms) once it has started,
-// so the caller can keep the banner up for as long as he talks.
-export async function speakForEgg({ eggId, foundCount, totalEggs, house }) {
+// so the caller can keep the banner up for as long as he talks. onLastSentence runs as his last sentence appears
+// (for the last secret: "Mischief managed!"); not at all when the subtitles are missing or he gets cut off.
+export async function speakForEgg({ eggId, foundCount, totalEggs, house }, { onLastSentence = null } = {}) {
     const lineId = pickLine(eggId, foundCount, totalEggs, house);
     const followUp = foundCount <= 1 && foundCount < totalEggs ? FIRST_FIND_FOLLOW_UP : undefined;
+    // Revelio keeps its own line, so when it's the last secret, the all-found line follows it.
+    const allFound = foundCount >= totalEggs && lineId !== 'all-found' ? 'all-found' : undefined;
     const subtitles = await loadSubtitles();
-    const parts = [lineId, followUp].filter(Boolean).map((id) => ({ lineId: id, sentences: subtitles.get(id) ?? [] }));
+    const parts = [lineId, followUp, allFound].filter(Boolean).map((id) => ({ lineId: id, sentences: subtitles.get(id) ?? [] }));
     const spokenMs = parts.reduce((total, part) => total + sentencesMs(part.sentences), 0);
     // Includes the linger, so the banner stays up as long as the subtitle.
     const durationMs = spokenMs && spokenMs + LINGER_MS + FOLLOW_UP_PAUSE_MS * (parts.length - 1);
@@ -354,7 +361,7 @@ export async function speakForEgg({ eggId, foundCount, totalEggs, house }) {
         }
     };
 
-    void speakLines(parts, token).finally(restore);
+    void speakLines(parts, token, onLastSentence).finally(restore);
     // Safety net in case the subtitles are missing.
     window.setTimeout(restore, (durationMs || 5000) + 1000);
     return durationMs;

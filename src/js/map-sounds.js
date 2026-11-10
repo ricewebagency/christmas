@@ -36,7 +36,8 @@ const MUTED_STORAGE_KEY = 'audio-muted';
 const buffers = new Map();
 let audioContext = null;
 
-function isMuted() {
+// Also for other Web Audio sounds on the map (map-finale.js).
+export function isAudioMuted() {
     try {
         return window.localStorage.getItem(MUTED_STORAGE_KEY) === 'true';
     } catch {
@@ -88,7 +89,7 @@ function playInstant(name, volume) {
         return false;
     }
 
-    if (isMuted()) {
+    if (isAudioMuted()) {
         return true;
     }
 

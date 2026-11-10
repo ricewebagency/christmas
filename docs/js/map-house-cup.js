@@ -1,6 +1,6 @@
-import { EASTER_EGG_COUNT } from './api-client.js?v=0d22dc9828';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=0d22dc9828';
-import { playMapSound } from './map-sounds.js?v=0d22dc9828';
+import { EASTER_EGG_COUNT } from './api-client.js?v=fd0efeab0f';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=fd0efeab0f';
+import { playMapSound } from './map-sounds.js?v=fd0efeab0f';
 
 // "House Cup" on the map: an hourglass per house, filled relative to the leading house. The button sits bottom-left
 // and is shown once the guest has filled in everything, also after the change deadline. Standings come with the guest state and are refreshed after every egg find.

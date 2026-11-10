@@ -11,10 +11,10 @@
 // secret mode, desktops), the tap and swipe gestures do the same.
 // Each egg reports itself through `onFound(eggId, { point, delayMs })` (map-rewards.js turns that into house points).
 // Egg ids must match EasterEggs.All in the API.
-import { fetchGuestNames } from './api-client.js?v=0d22dc9828';
-import { speakSpell } from './map-dumbledore.js?v=0d22dc9828';
-import { centerOf } from './map-rewards.js?v=0d22dc9828';
-import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=0d22dc9828';
+import { fetchGuestNames } from './api-client.js?v=fd0efeab0f';
+import { speakSpell } from './map-dumbledore.js?v=fd0efeab0f';
+import { centerOf } from './map-rewards.js?v=fd0efeab0f';
+import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=fd0efeab0f';
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const random = (min, max) => min + Math.random() * (max - min);
