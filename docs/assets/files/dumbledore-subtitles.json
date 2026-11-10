@@ -1,0 +1,139 @@
+[
+  {
+    "fileName": "first-find.mp3",
+    "sentences": [
+      {
+        "text": "It seems someone has found one of the castle's little secrets.",
+        "durationMs": 4450
+      }
+    ]
+  },
+  {
+    "fileName": "compass.mp3",
+    "sentences": [
+      {
+        "text": "Even a compass needs a good spin now and then.",
+        "durationMs": 2800
+      }
+    ]
+  },
+  {
+    "fileName": "footsteps.mp3",
+    "sentences": [
+      {
+        "text": "Keeping an eye on your fellow guests?",
+        "durationMs": 2300
+      },
+      {
+        "text": "How very Marauder of you.",
+        "durationMs": 1900
+      }
+    ]
+  },
+  {
+    "fileName": "castle.mp3",
+    "sentences": [
+      {
+        "text": "The castle does so enjoy being admired.",
+        "durationMs": 3000
+      }
+    ]
+  },
+  {
+    "fileName": "snow.mp3",
+    "sentences": [
+      {
+        "text": "A little snow never did anyone any harm.",
+        "durationMs": 3000
+      }
+    ]
+  },
+  {
+    "fileName": "nox.mp3",
+    "sentences": [
+      {
+        "text": "Even in the darkest of times, one need only remember to turn on the light.",
+        "durationMs": 4600
+      }
+    ]
+  },
+  {
+    "fileName": "revelio.mp3",
+    "sentences": [
+      {
+        "text": "Well cast. A party awaits in Assendelft.",
+        "durationMs": 3500
+      },
+      {
+        "text": "I'm told the pudding there is quite magical.",
+        "durationMs": 3050
+      }
+    ]
+  },
+  {
+    "fileName": "more-secrets.mp3",
+    "sentences": [
+      {
+        "text": "This was but one of seven secrets in the Marauder's Map.",
+        "durationMs": 4100
+      },
+      {
+        "text": "Find them all, and earn extra points for your house.",
+        "durationMs": 3580
+      }
+    ]
+  },
+  {
+    "fileName": "well-spotted.mp3",
+    "sentences": [
+      {
+        "text": "Well spotted.",
+        "durationMs": 1300
+      }
+    ]
+  },
+  {
+    "fileName": "remarkable.mp3",
+    "sentences": [
+      {
+        "text": "Remarkable. Truly remarkable.",
+        "durationMs": 2550
+      }
+    ]
+  },
+  {
+    "fileName": "quite-forgotten.mp3",
+    "sentences": [
+      {
+        "text": "Hmm... I actually had quite forgotten about that one.",
+        "durationMs": 3650
+      }
+    ]
+  },
+  {
+    "fileName": "look-closely.mp3",
+    "sentences": [
+      {
+        "text": "The map rewards those who look closely.",
+        "durationMs": 2400
+      }
+    ]
+  },
+  {
+    "fileName": "all-found.mp3",
+    "sentences": [
+      {
+        "text": "Every secret on this map you have found.",
+        "durationMs": 2600
+      },
+      {
+        "text": "I suspect the Marauders themselves would be impressed.",
+        "durationMs": 3300
+      },
+      {
+        "text": "Mischief managed!",
+        "durationMs": 1600
+      }
+    ]
+  }
+]

@@ -23,7 +23,7 @@ Backend voor de frontend in `ChristmasAtTheGreatHall.Web`. De frontend is statis
 | `code` | string | PK, 4 cijfers (`^[0-9]{4}$`), als string (voorloopnullen behouden) |
 | `guestName` | string | |
 | `rsvpStatus` | enum | `pending` \| `accepted` \| `declined` |
-| `house` | enum? | `gryffindor` \| `hufflepuff` \| `ravenclaw` \| `slytherin`, null tot gesorteerd; **onveranderlijk** |
+| `house` | enum? | `gryffindor` \| `hufflepuff` \| `ravenclaw` \| `slytherin`, null tot gesorteerd; opnieuw sorteren kan vóór de deadline |
 | `sortingScores` | object? | `{ gryffindor: n, ... }` |
 | `sortedAt` | datetime? | |
 | `dishIds` | string[] | max 4, uniek |
@@ -104,7 +104,7 @@ Body: `{ "rsvpStatus": "accepted" | "declined" }`
 ### `PUT /api/guests/{code}/sorting`
 Body: `{ "house": "ravenclaw", "scores": { ... }, "questionsAnswered": 12 }`
 - Vereist `rsvpStatus = accepted`, anders 409 `rsvp_not_accepted`.
-- House al gezet → 409 `house_already_set` (idempotent: als dezelfde house wordt gestuurd → 200).
+- Eerste sortering altijd toegestaan; opnieuw sorteren (ander house) alleen als `canChange`, anders 403 `changes_locked`. Zelfde house → 200.
 - → 200 `GuestState`.
 
 ### `PUT /api/guests/{code}/dishes`

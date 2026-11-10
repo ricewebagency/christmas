@@ -116,10 +116,11 @@
     </main>
     <!-- Pincode dialog: opened by invite.js over the letter when no valid code is known. Modal, so the letter
          behind it cannot be used; it only closes once the password is accepted. -->
+    <!-- Same parchment as the map's changes dialog, stretched (100% 100%) so the torn edges stay visible on every side. -->
     <dialog data-pin-dialog aria-labelledby="pin-title" aria-describedby="pin-hint"
-        class="w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-sm border-0 bg-transparent p-0 text-charcoal shadow-2xl shadow-black/70 transition-opacity duration-500 ease-out backdrop:bg-black/60 backdrop:backdrop-blur-sm backdrop:transition-opacity backdrop:duration-500">
+        class="w-[min(24rem,calc(100vw-2rem))] overflow-hidden border-0 bg-transparent p-0 text-charcoal transition duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] backdrop:bg-black/60 backdrop:backdrop-blur-sm backdrop:transition-opacity backdrop:duration-500">
         <form data-pin-form novalidate
-            class="flex flex-col items-center gap-8 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center px-6 py-10 text-center font-inkpot motion-safe:animate-popIn sm:px-10 sm:py-12">
+            class="flex flex-col items-center gap-10 bg-[url('../assets/images/parchment-cropped.png')] bg-[length:100%_100%] bg-no-repeat px-6 py-16 text-center font-inkpot sm:px-10 sm:py-20">
             <div class="flex flex-col gap-2">
                 <h2 id="pin-title" class="text-2xl italic leading-snug sm:text-3xl">
                     Enter the password to the Great Hall

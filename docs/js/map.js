@@ -1,6 +1,12 @@
 import { fetchDishCatalog } from './api-client.js';
 import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js';
+import { initMapChangesDialog } from './map-changes.js';
+import { initMapEasterEggs } from './map-easter-eggs.js';
 import { initMapFootsteps } from './map-footsteps.js';
+import { initMapHouseCup } from './map-house-cup.js';
+import { initMapReveal } from './map-reveal.js';
+import { createEggRewards } from './map-rewards.js';
+import { playMapSound, preloadMapSounds } from './map-sounds.js';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
@@ -8,8 +14,21 @@ const MAP_CLOSED_VIEWPORT_WIDTH_RATIO = 0.92;
 // Peek window within the mapPeek keyframes (tailwind.config.js: 25% to 60%).
 const MAP_PEEK_START = 0.25;
 const MAP_PEEK_END = 0.6;
+// The flap lifts twice per peek: from 25% and again from 43% (tailwind.config.js).
+const MAP_PEEK_LIFTS = [MAP_PEEK_START, 0.43];
 // Longest closing transition: scale delay 1000ms + 1600ms duration.
 const MAP_CLOSE_DURATION_MS = 2700;
+// Flap delays in map/index.html (open: bottom 300ms, top 1000ms; closing: the reverse).
+// Each fold gets its own pitch and loudness, with a little randomness, so they don't sound identical.
+// The second fold is also shorter: a slow swell in and a quick cut-off.
+const MAP_FLAP_SOUNDS = [
+    { delay: 300, rate: 1.12, volume: 0.9 },
+    { delay: 1000, rate: 0.78, volume: 1, fadeInMs: 350, fadeAfterMs: 550, fadeMs: 150 }
+];
+
+const playFlapSounds = (sounds = MAP_FLAP_SOUNDS) => sounds.forEach(({ delay, rate, ...options }) => {
+    playMapSound('paper', delay, { ...options, rate: rate + (Math.random() - 0.5) * 0.08 });
+});
 
 function initScreenLoader(onDone) {
     const loaderEl = document.querySelector(SCREEN_LOADER_SELECTOR);
@@ -45,7 +64,7 @@ function updateClosedScale(mapEl, scaleEl) {
     mapEl.style.setProperty('--map-closed-scale', scale.toFixed(4));
 }
 
-function initMap() {
+function initMap(guest) {
     const mapEl = document.querySelector('[data-map]');
     const scaleEl = document.querySelector('[data-map-scale]');
     const openButton = document.querySelector('[data-map-open]');
@@ -55,7 +74,12 @@ function initMap() {
     }
 
     updateClosedScale(mapEl, scaleEl);
-    initMapFootsteps(mapEl);
+    const footsteps = initMapFootsteps(mapEl);
+    const houseCup = initMapHouseCup(guest);
+    const rewards = createEggRewards(guest, { onStandings: (points, foundCount) => houseCup?.update(points, foundCount) });
+    initMapEasterEggs(mapEl, { footsteps, guestName: guest?.guestName, onFound: rewards.found });
+    const mapReveal = initMapReveal();
+    preloadMapSounds();
     window.addEventListener('resize', () => updateClosedScale(mapEl, scaleEl));
 
     initScreenLoader(() => {
@@ -66,6 +90,25 @@ function initMap() {
 
     const bottomFlapEl = document.querySelector('[data-map-flap="bottom"]');
     let isOpening = false;
+
+    // One peek sound per flap lift in each mapPeek iteration (MAP_PEEK_LIFTS).
+    const schedulePeekSound = (event) => {
+        if (event.animationName !== 'mapPeek' || event.target !== bottomFlapEl) {
+            return;
+        }
+
+        const peekDurationMs = getPeekDurationMs(bottomFlapEl);
+        MAP_PEEK_LIFTS.forEach((lift) => {
+            window.setTimeout(() => {
+                if (mapEl.dataset.state === 'closed' && !isOpening) {
+                    playMapSound('peek');
+                }
+            }, lift * peekDurationMs);
+        });
+    };
+
+    bottomFlapEl?.addEventListener('animationstart', schedulePeekSound);
+    bottomFlapEl?.addEventListener('animationiteration', schedulePeekSound);
 
     openButton?.addEventListener('click', () => {
         if (isOpening) {
@@ -81,6 +124,7 @@ function initMap() {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     mapEl.dataset.state = 'open';
+                    playFlapSounds();
                 });
             });
         }, getRemainingPeekMs(bottomFlapEl));
@@ -95,10 +139,12 @@ function initMap() {
 
         // 'closing' reverses the open sequence via its own delays (see map/index.html).
         mapEl.dataset.state = 'closing';
+        playFlapSounds();
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         window.setTimeout(() => {
             mapEl.dataset.state = 'closed';
+            mapReveal.reset();
             isOpening = false;
             if (openButton instanceof HTMLElement) {
                 openButton.focus({ preventScroll: true });
@@ -136,7 +182,11 @@ function renderEventDetails(guest) {
         ? `Christmas Eve, ${DATE_FORMAT.format(eventDate)}`
         : DATE_FORMAT.format(eventDate);
 
-    setLines(whenEl, [dateLabel, `(from ${TIME_FORMAT.format(eventDate)})`]);
+    const timeEl = document.createElement('span');
+    timeEl.className = 'text-xs text-charcoal/70 short:text-[10px]';
+    timeEl.textContent = `(from ${TIME_FORMAT.format(eventDate)})`;
+
+    setLines(whenEl, [dateLabel, timeEl]);
 }
 
 // Maps dish id -> { name, course } in catalog order.
@@ -213,6 +263,11 @@ async function renderGuestFeast(guest) {
     selectedDishes.forEach((dish) => appendDishRow(dishesEl, dish.course, dish.name));
 }
 
+function getPeekDurationMs(flapEl) {
+    const duration = parseFloat(window.getComputedStyle(flapEl).animationDuration);
+    return Number.isFinite(duration) && duration > 0 ? duration * 1000 : 3600;
+}
+
 // Opening mid-peek skips the flap transition, so wait until the peek is back at rest.
 function getRemainingPeekMs(flapEl) {
     if (!(flapEl instanceof HTMLElement) || typeof flapEl.getAnimations !== 'function') {
@@ -237,28 +292,20 @@ function showElement(el, displayClass = 'block') {
     }
 }
 
-function getChangeNote(guest) {
-    if (!guest.canChange) {
-        return guest.rsvpStatus === 'declined' ? 'Your response is sealed.' : 'Your choices are sealed.';
+// Before the deadline: "Make changes" opens the dialog (which shows the deadline). After: a sealed note.
+function renderChangeControls(guest) {
+    if (guest.canChange) {
+        initMapChangesDialog({ deadline: formatChangeDeadline(guest) });
+        return;
     }
 
-    const deadline = formatChangeDeadline(guest);
-    return deadline ? `Changes possible until ${deadline}` : '';
-}
-
-function renderChangeControls(guest) {
     const noteEl = document.querySelector('[data-map-change-note]');
 
     if (noteEl instanceof HTMLElement) {
-        noteEl.textContent = getChangeNote(guest);
+        noteEl.textContent = 'Your choices are sealed.';
     }
 
     showElement(document.querySelector('[data-map-changes]'), 'flex');
-
-    if (guest.canChange) {
-        showElement(document.querySelector('[data-map-change-dishes]'), 'inline-block');
-        showElement(document.querySelector('[data-map-change-response]'), 'inline-block');
-    }
 }
 
 function initLeaveButtons() {
@@ -310,7 +357,7 @@ async function bootstrapMapPage() {
         return;
     }
 
-    initMap();
+    initMap(guest);
     renderEventDetails(guest);
     renderChangeControls(guest);
     renderGuestFeast(guest).catch((error) => console.warn('Could not render the guest feast.', error));

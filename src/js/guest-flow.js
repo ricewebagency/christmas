@@ -11,6 +11,20 @@ const PAGE_PATHS = {
     map: './map/'
 };
 
+const PAGE_NAMES = {
+    home: 'the Great Hall',
+    invite: 'the Invitation',
+    rsvp: 'the RSVP',
+    sorting: 'the Sorting Hat',
+    cabin: 'the Hogwarts Express',
+    chamber: 'the Chamber of Secrets',
+    map: "the Marauder's Map"
+};
+
+export function getPageName(page) {
+    return PAGE_NAMES[page] ?? PAGE_NAMES.home;
+}
+
 export function getPageUrl(page, params = {}) {
     const url = new URL(PAGE_PATHS[page] ?? PAGE_PATHS.home, document.baseURI);
 
@@ -70,7 +84,8 @@ export function isPageAllowed(page, guest) {
         case 'rsvp':
             return guest.rsvpStatus === 'pending' || guest.canChange;
         case 'sorting':
-            return isAccepted && !hasHouse(guest);
+            // Re-sorting is allowed until the change deadline.
+            return isAccepted && (!hasHouse(guest) || guest.canChange);
         case 'cabin':
             return isAccepted && hasHouse(guest) && (!hasDishes(guest) || guest.canChange);
         case 'chamber':

@@ -12,7 +12,7 @@ import {
     removeGuestCodeFromUrl,
     verifyGuestCode
 } from "./api-client.js";
-import { getNextStep, getPageUrl, whenDomReady } from "./guest-flow.js";
+import { getNextStep, getPageName, getPageUrl, whenDomReady } from "./guest-flow.js";
 import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js";
 
 const RSVP_LABELS = {
@@ -36,6 +36,10 @@ const ENVELOPE_TOP_FILTERS = {
     closed: "drop-shadow(0 8px 8px rgba(0, 0, 0, 0.08))",
     opened: "drop-shadow(0 46px 40px rgba(0, 0, 0, 0.5))"
 };
+
+const ENVELOPE_OPEN_SOUND_SOURCE = new URL("../assets/music/short-paper-turn.wav", import.meta.url).href;
+const ENVELOPE_OPEN_SOUND_VOLUME = 0.6;
+let envelopeOpenSound = null;
 
 const RSVP_EXIT_FADE_DURATION_MS = 800;// Without a valid code the letter is shown first; the pincode dialog follows once its opening lines appeared.
 const PIN_DIALOG_DELAY_MS = 1800;
@@ -151,6 +155,23 @@ function removeInviteLoader(loaderEl) {
     }, INVITE_LOADER_TIMINGS.removeOverlayDelayMs);
 }
 
+function preloadEnvelopeOpenSound() {
+    envelopeOpenSound = new Audio(ENVELOPE_OPEN_SOUND_SOURCE);
+    envelopeOpenSound.preload = "auto";
+    envelopeOpenSound.volume = ENVELOPE_OPEN_SOUND_VOLUME;
+}
+
+function playEnvelopeOpenSound() {
+    if (!(envelopeOpenSound instanceof HTMLAudioElement)) {
+        return;
+    }
+
+    envelopeOpenSound.currentTime = 0;
+    void envelopeOpenSound.play().catch(() => {
+        // Decoration only; ignore blocked or failed playback.
+    });
+}
+
 function waitForInviteLoaderActivation(loaderEl) {
     return new Promise((resolve) => {
         const onActivate = (event) => {
@@ -165,6 +186,8 @@ function waitForInviteLoaderActivation(loaderEl) {
             if (typeof window.unlockBackgroundAudio === "function") {
                 void window.unlockBackgroundAudio();
             }
+
+            playEnvelopeOpenSound();
 
             loaderEl.removeEventListener("click", onActivate);
             loaderEl.removeEventListener("keydown", onActivate);
@@ -238,14 +261,16 @@ function setupInviteCta(guest) {
 
     const ctaLink = document.querySelector("[data-invite-cta]");
     const ctaLabel = document.querySelector("[data-invite-cta-label]");
+    const nextStep = getNextStep(guest);
 
     if (ctaLink instanceof HTMLAnchorElement) {
-        ctaLink.href = getPageUrl(getNextStep(guest));
+        ctaLink.href = getPageUrl(nextStep);
     }
 
     if (ctaLabel instanceof HTMLElement) {
-        ctaLabel.textContent = "Continue your journey";
-    }}
+        ctaLabel.textContent = `Continue to ${getPageName(nextStep)}`;
+    }
+}
 
 function setupRsvpExitTransition() {
     setupLinkExitTransition({
@@ -374,6 +399,7 @@ async function bootstrapInvitePage() {
     const guestResultPromise = resolveGuest();
 
     await whenDomReady();
+    preloadEnvelopeOpenSound();
     lockInitialViewportHeight();
     setupRsvpExitTransition();
     void initInvitePage(guestResultPromise);

@@ -12,6 +12,10 @@ const GUEST_CODE_PATTERN = /^[0-9]{4}$/;
 const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const RSVP_STATUSES = ['pending', 'accepted', 'declined'];
 const DISH_SELECTION_LIMIT = 4;
+// Keep in sync with EasterEggs.All in the API.
+const EASTER_EGG_IDS = ['compass', 'footsteps', 'castle', 'snow', 'nox', 'revelio', 'mischief'];
+const HOUSE_POINTS_PER_EGG = 10;
+export const EASTER_EGG_COUNT = EASTER_EGG_IDS.length;
 const DISH_CATALOG_URL = new URL('../assets/files/dishes.json', import.meta.url);
 
 export class ApiError extends Error {
@@ -116,6 +120,17 @@ function normalizeDishIds(value) {
     ));
 }
 
+function normalizeEggIds(value) {
+    return Array.isArray(value)
+        ? EASTER_EGG_IDS.filter((eggId) => value.includes(eggId))
+        : [];
+}
+
+// Points per house; every house is present (0 when missing).
+function normalizeHousePoints(value) {
+    return Object.fromEntries(HOUSES.map((house) => [house, Math.max(0, Number(value?.[house]) || 0)]));
+}
+
 function normalizeGuestState(data = {}) {
     const house = normalizeHouse(data.house);
 
@@ -130,7 +145,9 @@ function normalizeGuestState(data = {}) {
         dishIds: normalizeDishIds(data.dishIds),
         changeDeadline: data.changeDeadline ?? null,
         canChange: Boolean(data.canChange),
-        isAdmin: Boolean(data.isAdmin)
+        isAdmin: Boolean(data.isAdmin),
+        foundEggIds: normalizeEggIds(data.foundEggIds),
+        housePoints: normalizeHousePoints(data.housePoints)
     };
 }
 
@@ -193,6 +210,8 @@ const backend = {
     putSorting: (code, payload) => request('PUT', `/api/guests/${encodeURIComponent(code)}/sorting`, payload),
     putDishes: (code, dishIds) => request('PUT', `/api/guests/${encodeURIComponent(code)}/dishes`, { dishIds }),
     getTakenDishes: (code) => request('GET', `/api/guests/${encodeURIComponent(code)}/dishes/taken`),
+    getGuestNames: (code) => request('GET', `/api/guests/${encodeURIComponent(code)}/names`),
+    putEgg: (code, eggId) => request('PUT', `/api/guests/${encodeURIComponent(code)}/eggs/${encodeURIComponent(eggId)}`),
     getDishes: () => request('GET', '/api/dishes')
 };
 
@@ -279,6 +298,38 @@ export async function fetchTakenCabinDishIds() {
         ok: true,
         status: 200,
         data: { dishIds: normalizeDishIds(data?.dishIds) }
+    };
+}
+
+// Names of the other guests who are coming (footsteps on the map). Empty on any failure.
+export async function fetchGuestNames() {
+    try {
+        const data = await getBackend().getGuestNames(requireGuestCode());
+        return Array.isArray(data?.names)
+            ? data.names.map((name) => String(name ?? '').trim()).filter(Boolean)
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+// Reports a found easter egg. Resolves to { eggId, firstFind, pointsAwarded, house, housePoints, foundCount, totalEggs, allHousePoints }.
+export async function sendEasterEggFound(eggId) {
+    if (!EASTER_EGG_IDS.includes(eggId)) {
+        throw new Error(`Unknown easter egg: ${eggId}`);
+    }
+
+    const data = await getBackend().putEgg(requireGuestCode(), eggId);
+    return {
+        eggId,
+        firstFind: Boolean(data?.firstFind),
+        pointsAwarded: Number(data?.pointsAwarded) || 0,
+        house: normalizeHouse(data?.house),
+        housePoints: Number(data?.housePoints) || 0,
+        foundCount: Number(data?.foundCount) || 0,
+        totalEggs: Number(data?.totalEggs) || EASTER_EGG_IDS.length,
+        // null when the API doesn't send it (older API version).
+        allHousePoints: data?.allHousePoints ? normalizeHousePoints(data.allHousePoints) : null
     };
 }
 
@@ -420,7 +471,9 @@ function toMockGuestState(guest) {
         dishIds: [...guest.dishIds],
         changeDeadline: MOCK_EVENT.changeDeadline,
         canChange: mockCanChange(),
-        isAdmin: false
+        isAdmin: false,
+        foundEggIds: [...(guest.foundEggIds ?? [])],
+        housePoints: mockHousePoints(guest)
     };
 }
 
@@ -480,6 +533,17 @@ function assertMockChangeAllowed() {
     }
 }
 
+// Mock House Cup: fixed scores for the other houses, plus the mock guest's own finds.
+function mockHousePoints(guest) {
+    const points = { gryffindor: 30, hufflepuff: 20, ravenclaw: 40, slytherin: 10 };
+
+    if (guest.house && guest.rsvpStatus === 'accepted') {
+        points[guest.house] += (guest.foundEggIds ?? []).length * HOUSE_POINTS_PER_EGG;
+    }
+
+    return points;
+}
+
 const mockBackend = {
     async getGuest(code) {
         return toMockGuestState(await loadMockGuestForCode(code));
@@ -507,10 +571,10 @@ const mockBackend = {
         }
 
         if (guest.house && guest.house !== payload.house) {
-            throw new ApiError(409, 'house_already_set', 'The Sorting Hat has already spoken.');
+            assertMockChangeAllowed();
         }
 
-        if (!guest.house) {
+        if (guest.house !== payload.house) {
             guest.house = payload.house;
             guest.sortingScores = payload.scores;
             writeMockGuest(guest);
@@ -552,6 +616,40 @@ const mockBackend = {
     async getTakenDishes(code) {
         const guest = await loadMockGuestForCode(code);
         return { dishIds: guest.takenByOthers.filter((dishId) => !guest.dishIds.includes(dishId)) };
+    },
+
+    async getGuestNames() {
+        await mockDelay();
+        return { names: ['Anna', 'Bram', 'Charlotte', 'Daan'] };
+    },
+
+    async putEgg(code, eggId) {
+        const guest = await loadMockGuestForCode(code);
+
+        if (guest.rsvpStatus !== 'accepted') {
+            throw new ApiError(409, 'rsvp_not_accepted', 'Only accepted guests can earn house points.');
+        }
+
+        if (!guest.house) {
+            throw new ApiError(409, 'not_sorted', 'The Sorting Hat has not spoken yet.');
+        }
+
+        const found = new Set(guest.foundEggIds ?? []);
+        const firstFind = !found.has(eggId);
+        found.add(eggId);
+        guest.foundEggIds = normalizeEggIds([...found]);
+        writeMockGuest(guest);
+
+        return {
+            eggId,
+            firstFind,
+            pointsAwarded: firstFind ? HOUSE_POINTS_PER_EGG : 0,
+            house: guest.house,
+            housePoints: mockHousePoints(guest)[guest.house],
+            foundCount: guest.foundEggIds.length,
+            totalEggs: EASTER_EGG_IDS.length,
+            allHousePoints: mockHousePoints(guest)
+        };
     },
 
     async getDishes() {

@@ -1,7 +1,7 @@
 # PLAN — Terugkerende gasten & wijzigen van keuzes
 
 ## Doel
-Een gast die de site opnieuw opent, komt op de juiste plek uit en verliest geen voortgang. Tot een deadline mag een gast de RSVP en de gerechten wijzigen. Het house ligt na het sorteren vast.
+Een gast die de site opnieuw opent, komt op de juiste plek uit en verliest geen voortgang. Tot een deadline mag een gast de RSVP en de gerechten wijzigen en opnieuw gesorteerd worden.
 
 ## Huidige situatie (probleem)
 - `src/index.html` stuurt iedereen naar `/invite/` zonder naar voortgang te kijken.
@@ -24,7 +24,7 @@ Een gast die de site opnieuw opent, komt op de juiste plek uit en verliest geen 
    - **"Not you?"** op `/map/` wist de code en gaat naar het invoerscherm.
    - **Te veel mislukte pogingen** (API geeft 429): de melding "The castle doors are sealed for a moment, try again in X minutes" op basis van `Retry-After`.
 3. **RSVP-statussen:** `pending` | `accepted` | `declined` (overal hetzelfde, ook in de API).
-4. **House is onveranderlijk** na het sorteren.
+4. **Opnieuw sorteren** kan onbeperkt zolang `canChange` ("Make changes" → "Your house" op `/map/`). De gerechten blijven staan; na de uitslag gaat de gast terug naar `/map/`.
 5. **Wijzigdeadline** (`changeDeadline`) komt uit de API: **17 december 2026, 23:59 (Europe/Amsterdam)**. Daarna staat alles vast (`canChange: false`).
 6. **Productie-URL:** `https://riceweb.nl/christmas/`. De site draait in een subpad, dus alle redirects en links blijven relatief (`./map/`, `../cabin/`) of worden opgebouwd vanaf een basispad. Gebruik nooit absolute paden zoals `/map/`.
 7. **Afgemelde gasten** krijgen op `/map/` een eigen variant: een bedankje voor de RSVP, "jammer dat je er niet bij kunt zijn" en (als `canChange`) een knop "Change your response". Geen gerechten, geen house-details en geen kaart.
@@ -53,13 +53,16 @@ Elke pagina roept bij het laden `guardPage('<pagina>')` aan. Als de gast op een 
 |---|---|
 | invite | altijd |
 | rsvp | `pending`, of `canChange` (wijzigen) |
-| sorting | `accepted` en nog geen house |
+| sorting | `accepted`, en (nog geen house óf `canChange`) |
 | cabin | `accepted` + house, en (geen gerechten óf `canChange`) |
 | chamber | `accepted` + house + gerechten |
 | map | (`accepted` + house + gerechten) óf `declined` |
 
 ## Wijzigen
-- **Gerecht wijzigen:** `/map/` → knop "Change your dishes" → `/cabin/?edit=1`.
+- **Wijzigen:** `/map/` → knop "Make changes" opent een venster met drie keuzes en de deadline:
+  - "Your dishes" → `/cabin/?edit=1`
+  - "Your house" → `/sorting/?edit=1` → terug naar `/map/`
+  - "Your RSVP" → `/rsvp/?edit=1`
   - De huidige keuze wordt voorgeselecteerd en eigen gerechten tellen niet als "taken".
   - Opslaan → terug naar `/map/` zonder chamber en zonder treinintro (of een verkorte versie).
 - **Aanwezigheid wijzigen:** `/map/` (beide varianten) → "Change your response" → `/rsvp/?edit=1`.
@@ -115,7 +118,7 @@ Elke pagina roept bij het laden `guardPage('<pagina>')` aan. Als de gast op een 
 
 ### 6. Sorting (`src/js/sorting.js`)
 - [x] Guard: bij een bestaande house doorsturen.
-- [x] Bij 409 (house bestaat al) doorsturen naar `getNextStep()`.
+- [x] Bij 409/403 (niet aangemeld of deadline voorbij) doorsturen naar `getNextStep()`.
 
 ### 7. Cabin (`src/js/cabin.js`)
 - [x] `resetDishSelectionOnCabinOpen()` verwijderen. In edit-modus voorselecteren vanuit `guest.dishIds`.
@@ -128,7 +131,7 @@ Elke pagina roept bij het laden `guardPage('<pagina>')` aan. Als de gast op een 
 
 ### 9. Map (`src/js/map.js`, `src/map/index.html`)
 - [x] Guard toevoegen.
-- [x] Wijzigknoppen "Change your dishes" en "Change your response" (Tailwind), alleen als `canChange`.
+- [x] Knop "Make changes" met wijzigvenster (dishes, house, RSVP; `map-changes.js`), alleen als `canChange`.
 - [x] Deadline tonen ("Changes possible until …") of "Your choices are sealed".
 - [x] De link "Not you? Leave the Great Hall" (beide varianten) → `clearGuestCode()` → hoofdpagina.
 - [x] **Afgemeld-variant** (`rsvpStatus = declined`): een aparte sectie in `src/map/index.html` (verborgen tenzij declined) met:

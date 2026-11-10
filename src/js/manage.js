@@ -15,6 +15,8 @@ const RSVP_BADGES = {
 };
 const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const HOUSE_LABELS = { gryffindor: 'Gryffindor', hufflepuff: 'Hufflepuff', ravenclaw: 'Ravenclaw', slytherin: 'Slytherin' };
+// Easter eggs op de Marauder's Map (zelfde volgorde als de API); elke eerste vondst = 10 huispunten.
+const EGG_LABELS = { compass: 'Kompas', footsteps: 'Voetstappen', castle: 'Kasteel', snow: 'Sneeuw (schudden)', nox: 'Nox/Lumos (plat leggen)', revelio: 'Revelio', mischief: 'Mischief managed' };
 const BADGE_BASE = 'inline-flex items-center rounded-full px-1.5 py-px text-[11px] ring-1 ring-inset';
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
@@ -30,6 +32,9 @@ const state = {
     settings: { baseUrl: API_BASE_URL, key: '' },
     guests: [],
     totals: null,
+    // Huispunten per huis uit de API (easter eggs) en het aantal eggs dat te vinden is.
+    housePoints: {},
+    totalEggs: 0,
     catalog: [],
     catalogVersion: null,
     catalogEditable: false,
@@ -437,7 +442,9 @@ function normalizeGuest(guest) {
         sortedAt: guest?.sortedAt ?? null,
         dishesUpdatedAt: guest?.dishesUpdatedAt ?? null,
         createdAt: guest?.createdAt ?? null,
-        isAdmin: Boolean(guest?.isAdmin)
+        isAdmin: Boolean(guest?.isAdmin),
+        foundEggIds: Array.isArray(guest?.foundEggIds) ? guest.foundEggIds.map(String) : [],
+        housePoints: Number(guest?.housePoints) || 0
     };
 }
 
@@ -450,6 +457,8 @@ async function loadAll() {
         const [overview, catalog] = await Promise.all([request('GET', '/api/manage/guests'), loadCatalog()]);
         state.guests = (overview?.guests ?? []).map(normalizeGuest);
         state.totals = overview?.totals ?? null;
+        state.housePoints = overview?.housePoints ?? {};
+        state.totalEggs = Number(overview?.totalEggs) || 0;
         state.catalog = catalog.courses;
         state.catalogVersion = catalog.version;
         state.catalogEditable = catalog.editable;
@@ -510,14 +519,7 @@ function renderTotals() {
             statTile('Geclaimd', ratio('claimed', totals.dishesClaimed ?? 0, totals.dishesTotal ?? 0)),
             statTile('Vrij', num('free', totals.dishesFree ?? 0))
         ]),
-        statGroup('Huizen', HOUSES.map((house) => {
-            const members = guests.filter((guest) => guest.house === house).length;
-            return `
-            <div data-tile class="flex flex-1 items-center justify-center gap-2 px-3 py-1.5 transition-colors duration-300 hover:bg-neutral-800/50" title="${escapeHtml(HOUSE_LABELS[house])}: ${members}">
-                ${houseLogo(house, 'h-6 w-6')}
-                <span class="text-base font-semibold tabular-nums text-neutral-100">${num(`house-${house}`, members)}</span>
-            </div>`;
-        }))
+        renderHouses()
     ].join('');
 
     if (!state.totalsRendered) {
@@ -528,6 +530,26 @@ function renderTotals() {
     }
 
     animateCounts(container);
+}
+
+// Huizen: punten (uit de easter eggs) en aantal leden per huis. Het huis aan kop krijgt de accentkleur.
+function renderHouses() {
+    const points = Object.fromEntries(HOUSES.map((house) => [house, Number(state.housePoints?.[house]) || 0]));
+    const top = Math.max(...Object.values(points));
+    const eggsFound = state.guests.reduce((sum, guest) => sum + guest.foundEggIds.length, 0);
+
+    return statGroup(`Huizen (${eggsFound} easter eggs gevonden)`, HOUSES.map((house) => {
+        const isLeader = top > 0 && points[house] === top;
+        const members = state.guests.filter((guest) => guest.house === house).length;
+        return `
+            <div data-tile class="flex flex-1 items-center justify-center gap-2 px-3 py-1.5 transition-colors duration-300 hover:bg-neutral-800/50" title="${escapeHtml(HOUSE_LABELS[house])}: ${points[house]} punten, ${members} leden${isLeader ? ' (aan kop)' : ''}">
+                ${houseLogo(house, 'h-6 w-6')}
+                <div class="leading-tight">
+                    <p class="whitespace-nowrap text-base font-semibold tabular-nums ${isLeader ? 'text-accent' : 'text-neutral-100'}">${num(`points-${house}`, points[house])} <span class="text-xs font-normal text-neutral-500">pt</span></p>
+                    <p class="whitespace-nowrap text-xs tabular-nums text-neutral-400">${num(`house-${house}`, members)} leden</p>
+                </div>
+            </div>`;
+    }));
 }
 
 function getFilteredGuests() {
@@ -576,7 +598,8 @@ const ICONS = {
     open: '<path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />',
     reset: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" />',
     delete: '<path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
-    check: '<path d="M20 6 9 17l-5-5" />'
+    check: '<path d="M20 6 9 17l-5-5" />',
+    sparkle: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />'
 };
 
 function icon(name, size = 'h-4 w-4') {
@@ -596,6 +619,20 @@ function renderGuestRow(guest) {
     const dishes = dishCount
         ? `<ul class="space-y-0.5">${guest.dishes.map((dish) => `<li><span class="text-neutral-500">#${escapeHtml(dish.id)}</span> ${escapeHtml(dish.name)}</li>`).join('')}</ul>`
         : '<p class="text-neutral-600">Nog geen gerechten gekozen.</p>';
+    const eggCount = guest.foundEggIds.length;
+    const eggNames = guest.foundEggIds.map((eggId) => EGG_LABELS[eggId] ?? eggId);
+    const eggTitle = eggCount
+        ? `${eggCount}/${state.totalEggs || eggCount} easter eggs: ${eggNames.join(', ')}\n${guest.housePoints} huispunten${guest.housePoints ? '' : ' (telt nu niet mee)'}`
+        : 'Nog geen easter eggs gevonden';
+    const eggs = eggCount
+        ? `<p class="mt-2 text-neutral-300"><span class="text-accent">${guest.housePoints} huispunten</span> · ${escapeHtml(eggNames.join(', '))}
+            <button type="button" data-action="clear-eggs" data-code="${code}" aria-label="Huispunten van ${name} wissen"
+                class="ml-1 rounded text-neutral-500 underline underline-offset-2 transition hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">wissen</button></p>`
+        : '';
+    const eggCounter = eggCount
+        ? `<button type="button" data-action="clear-eggs" data-code="${code}" title="${escapeHtml(`${eggTitle}\nKlik om de huispunten te wissen`)}" aria-label="Huispunten van ${name} wissen"
+            class="inline-flex w-9 items-center gap-1 rounded text-xs text-accent transition hover:text-red-400 active:scale-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">${icon('sparkle', 'h-3.5 w-3.5')}${eggCount}</button>`
+        : `<span class="inline-flex w-9 items-center gap-1 text-xs text-neutral-600" title="${escapeHtml(eggTitle)}">${icon('sparkle', 'h-3.5 w-3.5')}0</span>`;
 
     return `
         <article data-guest="${code}" class="transition-colors hover:bg-neutral-800/30">
@@ -615,6 +652,7 @@ function renderGuestRow(guest) {
                             class="${BADGE_BASE} transition active:scale-90 ${guest.isAdmin ? 'text-accent ring-accent/40 hover:ring-red-500/40 hover:text-red-400' : 'text-neutral-600 ring-neutral-700 hover:text-accent hover:ring-accent/40'}">${guest.isAdmin ? 'Admin' : '+ Admin'}</button>
                     </span>
                     <span class="inline-flex w-9 items-center gap-1 text-xs ${dishCount ? 'text-neutral-300' : 'text-neutral-600'}" title="${escapeHtml(dishTitle)}">${icon('dish', 'h-3.5 w-3.5')}${dishCount}</span>
+                    ${eggCounter}
                 </div>
                 <div class="flex shrink-0 items-center">
                     <button type="button" data-action="copy-link" data-code="${code}" title="Link kopiëren" aria-label="Link van ${name} kopiëren"
@@ -630,7 +668,7 @@ function renderGuestRow(guest) {
             <div id="guest-details-${code}" data-details class="${collapseClass(expanded)}" ${expanded ? '' : 'inert'}>
                 <div class="min-h-0 overflow-hidden">
                     <div class="grid gap-3 px-3 pb-3 text-xs sm:grid-cols-2 sm:pl-[4.375rem]">
-                        <div>${dishes}</div>
+                        <div>${dishes}${eggs}</div>
                         <dl class="max-w-xs space-y-0.5">
                             ${guestDate('RSVP', guest.rsvpUpdatedAt)}
                             ${guestDate('Gesorteerd', guest.sortedAt)}
@@ -1186,7 +1224,7 @@ Met de pincode krijgt deze gast toegang tot het beheerscherm.`)) {
     }
 
     if (button.dataset.action === 'reset') {
-        if (!window.confirm(`Reset ${guest.guestName} (${guest.code})?\nRSVP, huis en gerechten worden gewist.`)) {
+        if (!window.confirm(`Reset ${guest.guestName} (${guest.code})?\nRSVP, huis, gerechten en gevonden easter eggs (huispunten) worden gewist.`)) {
             return;
         }
 
@@ -1195,8 +1233,18 @@ Met de pincode krijgt deze gast toegang tot het beheerscherm.`)) {
         return;
     }
 
+    if (button.dataset.action === 'clear-eggs') {
+        if (!window.confirm(`Huispunten van ${guest.guestName} (${guest.code}) wissen?\nDe ${guest.foundEggIds.length} gevonden easter egg(s) worden gewist; RSVP, huis en gerechten blijven staan.`)) {
+            return;
+        }
+
+        state.highlightCode = guest.code;
+        await runAction(() => request('DELETE', `/api/manage/guests/${encodeURIComponent(guest.code)}/eggs`), `Huispunten van ${guest.guestName} zijn gewist.`);
+        return;
+    }
+
     if (button.dataset.action === 'delete') {
-        if (!window.confirm(`${guest.guestName} (${guest.code}) definitief verwijderen?\nGeclaimde gerechten komen vrij.`)) {
+        if (!window.confirm(`${guest.guestName} (${guest.code}) definitief verwijderen?\nGeclaimde gerechten komen vrij en de huispunten vervallen.`)) {
             return;
         }
 

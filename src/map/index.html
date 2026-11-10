@@ -43,15 +43,57 @@
                         class="pointer-events-none absolute inset-x-[3%] top-[28%] h-[46%] rounded-md bg-black/60 blur-xl transition-[top,height] duration-[1400ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-data-[state=open]:top-[2%] group-data-[state=open]:h-[98%] group-data-[state=open]:delay-300 group-data-[state=closing]:delay-[1000ms] motion-reduce:transition-none">
                     </div>
 
-                    <section lang="en" aria-labelledby="map-event-title"
-                        class="absolute inset-x-0 top-[26.0417%] h-[47.3307%] font-inkpot text-charcoal">
+                    <section data-map-reveal-root data-spell="hidden" lang="en" aria-labelledby="map-event-title"
+                        class="group/reveal absolute inset-x-0 top-[26.0417%] h-[47.3307%] font-inkpot text-charcoal">
                         <img src="./assets/images/map/map-center-inside.png" alt=""
                             class="pointer-events-none absolute inset-0 h-full w-full select-none">
                         <!-- Short screens: wider, tighter, smaller text. Auto margins center vertically but fall back to top + scroll when it overflows (works in every browser, unlike "safe center"). -->
                         <div
-                            class="absolute inset-x-[23%] inset-y-[5%] flex flex-col items-center gap-4 [&>:first-child]:mt-auto [&>:last-child]:mb-auto overflow-y-auto overscroll-contain text-center [scrollbar-width:none] short:inset-x-[15%] short:inset-y-[3%] short:gap-2 opacity-0 transition-opacity duration-500 ease-out group-data-[state=open]:delay-[2200ms] group-data-[state=open]:duration-[1400ms] group-data-[state=open]:opacity-100 motion-reduce:transition-none">
+                            class="absolute inset-x-[23%] inset-y-[5%] flex flex-col items-center [&>*]:my-auto overflow-y-auto overscroll-contain text-center [scrollbar-width:none] short:inset-x-[15%] short:inset-y-[3%] opacity-0 transition-opacity duration-500 ease-out group-data-[state=open]:delay-[2200ms] group-data-[state=open]:duration-[1400ms] group-data-[state=open]:opacity-100 motion-reduce:transition-none">
+                            <!-- Revelio: the details stay hidden until the guest casts the spell (map-reveal.js). -->
+                            <button data-map-reveal type="button" aria-controls="map-event-details" aria-expanded="false"
+                                aria-label="Cast Revelio to reveal the theme party information"
+                                class="group/wand relative flex shrink-0 flex-col items-center gap-2 rounded-lg px-3 py-2 text-charcoal transition-[opacity,transform,filter] duration-700 ease-out focus:outline-none focus-visible:outline-dashed focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-charcoal/50 short:gap-1 group-data-[spell=casting]/reveal:pointer-events-none group-data-[spell=casting]/reveal:scale-90 group-data-[spell=casting]/reveal:opacity-0 group-data-[spell=casting]/reveal:blur-sm group-data-[spell=casting]/reveal:delay-300 motion-reduce:transition-none">
+                                <!-- Sigil: rune ring with a wand in the middle. -->
+                                <span data-map-reveal-sigil class="relative block h-24 w-24 short:h-16 short:w-16">
+                                    <span aria-hidden="true"
+                                        class="absolute -inset-[15%] rounded-full bg-[radial-gradient(circle,rgba(198,164,90,0.55),transparent_70%)] animate-backdropGlow group-hover/wand:[animation-duration:0.9s] motion-reduce:animate-none motion-reduce:opacity-40"></span>
+                                    <svg aria-hidden="true" viewBox="0 0 100 100" fill="none" stroke="currentColor"
+                                        class="absolute inset-0 h-full w-full opacity-70 animate-[spinSlow_40s_linear_infinite] group-hover/wand:opacity-100 motion-reduce:animate-none">
+                                        <circle cx="50" cy="50" r="47" stroke-width="0.8" />
+                                        <circle cx="50" cy="50" r="41" stroke-width="1.2" stroke-dasharray="1.5 4" stroke-linecap="round" />
+                                        <circle cx="50" cy="50" r="36" stroke-width="0.5" />
+                                        <path fill="currentColor" stroke="none" d="M50 0 52.5 3 50 6 47.5 3ZM50 94 52.5 97 50 100 47.5 97ZM0 50 3 47.5 6 50 3 52.5ZM94 50 97 47.5 100 50 97 52.5Z" />
+                                    </svg>
+                                    <svg aria-hidden="true" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-linecap="round"
+                                        class="absolute inset-[24%] h-[52%] w-[52%] origin-[20%_80%] transition-transform duration-300 group-hover/wand:-rotate-12 group-data-[spell=casting]/reveal:animate-revelioWand motion-reduce:transition-none motion-reduce:!animate-none">
+                                        <path d="M10 30 29 11" stroke-width="1.6" />
+                                        <path d="M8 32 14.5 25.5" stroke-width="3.4" />
+                                        <path d="M15.5 26.5 13.5 24.5" stroke-width="0.8" />
+                                        <path fill="currentColor" stroke="none" d="M31 3.5 32.2 7.8 36.5 9 32.2 10.2 31 14.5 29.8 10.2 25.5 9 29.8 7.8Z"
+                                            class="origin-center [transform-box:fill-box] animate-mapTwinkle motion-reduce:animate-none" />
+                                    </svg>
+                                </span>
+
+                                <span class="flex items-center gap-1.5 text-2xl leading-none short:text-xl">
+                                    <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                                        class="h-3 w-8 shrink-0 opacity-60 transition-opacity duration-200 group-hover/wand:opacity-100">
+                                        <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                    </svg>
+                                    <span>Revelio</span>
+                                    <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                                        class="h-3 w-8 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/wand:opacity-100">
+                                        <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                    </svg>
+                                </span>
+                                <span class="text-[10px] italic leading-snug text-charcoal/70 short:hidden">Cast the spell to reveal what is hidden</span>
+                            </button>
+
+                            <!-- Shown after the spell, inked in from top to bottom. -->
+                            <div id="map-event-details" data-map-reveal-content
+                                class="hidden w-full shrink-0 flex-col items-center gap-4 short:gap-2 [mask-image:linear-gradient(to_bottom,#000_40%,transparent_60%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_40%,transparent_60%)] [mask-size:100%_250%] [-webkit-mask-size:100%_250%] [mask-repeat:no-repeat] [-webkit-mask-repeat:no-repeat] animate-inkReveal motion-reduce:animate-none motion-reduce:[mask-image:none] motion-reduce:[-webkit-mask-image:none]">
                             <hgroup>
-                                <h2 id="map-event-title" class="text-2xl leading-tight short:text-lg">Theme Party Information</h2>
+                                <h2 id="map-event-title" tabindex="-1" class="text-2xl leading-tight focus:outline-none short:text-lg">Theme Party Information</h2>
                                 <!-- Address on one line under the title; opens the route in Google Maps. -->
                                 <p class="mt-1 text-xs leading-snug short:mt-0.5 short:text-[11px]">
                                     <a data-map-address href="https://www.google.com/maps/search/?api=1&amp;query=Bestevaerstraat+16+Assendelft" target="_blank" rel="noopener noreferrer"
@@ -67,23 +109,42 @@
                                 <div>
                                     <dt class="text-[10px] uppercase tracking-widest text-charcoal/70">When</dt>
                                     <!-- Filled from the invitation's eventDate (map.js); this is the fallback. -->
-                                    <dd data-map-when class="mt-1 text-sm short:mt-0.5 short:text-xs">Christmas Eve, 24 December<br>(from 18:00)</dd>
+                                    <dd data-map-when class="mt-1 text-sm short:mt-0.5 short:text-xs">Christmas Eve, 24 December<br><span class="text-xs text-charcoal/70 short:text-[10px]">(from 18:00)</span></dd>
                                 </div>
                                 <div>
                                     <dt class="text-[10px] uppercase tracking-widest text-charcoal/70">Dress code</dt>
-                                    <dd class="mt-1 text-sm short:mt-0.5 short:text-xs">Harry Potter costume</dd>
+                                    <dd class="mt-1 text-sm short:mt-0.5 short:text-xs">Harry Potter costume<br><span class="text-xs text-charcoal/70 short:text-[10px]">(anything magical)</span></dd>
                                 </div>
                                 <div class="col-span-2">
                                     <dt class="text-[10px] uppercase tracking-widest text-charcoal/70">Dishes you'll bring</dt>
                                     <dd class="mt-1 short:mt-0.5">
                                         <!-- Dishes chosen in the cabin, rendered by map.js; two per row, an odd last one centered. -->
                                         <dl data-map-dishes class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm leading-tight [&>*]:basis-[calc(50%-0.5rem)] [&>dd]:basis-full short:gap-x-3 short:text-xs short:[&>*]:basis-[calc(50%-0.375rem)] short:[&>dd]:basis-full"></dl>
-                                        <!-- Only while changes are allowed (map.js). -->
-                                        <a data-map-change-dishes href="./cabin/?edit=1"
-                                            class="mt-1.5 hidden text-[10px] italic text-charcoal/80 underline decoration-charcoal/40 underline-offset-2 transition-colors duration-200 hover:text-charcoal">Change your dishes</a>
                                     </dd>
                                 </div>
                             </dl>
+                            </div>
+                        </div>
+
+                        <!-- Easter egg: tapping the printed compass spins it (map-easter-eggs.js). While it spins, the patch
+                             hides the printed rose and the inked copy turns on top; both match the print exactly at rest. -->
+                        <!-- A plain div, not a button: it never takes focus, so aria-hidden stays valid. -->
+                        <div data-egg-compass aria-hidden="true"
+                            class="absolute left-[81.4453%] top-[1.5131%] z-[5] h-[19.8074%] w-[14.0625%] cursor-default rounded-full [-webkit-tap-highlight-color:transparent]">
+                            <span data-egg-compass-disc class="pointer-events-none absolute inset-0 hidden">
+                                <img src="./assets/images/map/map-compass-patch.png" alt=""
+                                    class="absolute inset-0 h-full w-full select-none">
+                                <img data-egg-compass-rose src="./assets/images/map/map-compass-rose.png" alt=""
+                                    class="absolute inset-0 h-full w-full select-none">
+                            </span>
+                        </div>
+
+                        <!-- The spell word flaring up (map-reveal.js), plus the spark layer. -->
+                        <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+                            <p data-map-reveal-spell
+                                class="absolute inset-0 hidden items-center justify-center text-4xl text-charcoal [text-shadow:0_0_14px_rgba(198,164,90,0.95),0_0_3px_rgba(198,164,90,0.7)] animate-revelioCast short:text-3xl">
+                                Revelio!</p>
+                            <div data-map-reveal-sparks class="absolute inset-0"></div>
                         </div>
                     </section>
 
@@ -98,6 +159,10 @@
                                 <h1 class="text-[clamp(1.125rem,3.2dvh,1.875rem)] leading-none">The Marauder's Map</h1>
                                 <p class="mt-2 text-xs italic leading-snug short:mt-1">&ldquo;I solemnly swear that I am up to no good.&rdquo;</p>
                             </div>
+                            <!-- Easter egg: tapping the castle lights its windows and a string of Christmas lights (map-easter-eggs.js). -->
+                            <div data-egg-castle-lights aria-hidden="true" class="pointer-events-none absolute inset-0"></div>
+                            <div data-egg-castle aria-hidden="true"
+                                class="absolute left-[4.39%] top-[5%] h-[52%] w-[23.44%] cursor-default [-webkit-tap-highlight-color:transparent]"></div>
                         </header>
                         <div aria-hidden="true"
                             class="absolute inset-0 [-webkit-backface-visibility:hidden] [backface-visibility:hidden] [transform:rotateY(180deg)]">
@@ -119,18 +184,18 @@
                                     <h2 id="map-guest-name" data-map-guest-name class="text-xl leading-tight">Guest</h2>
                                     <p data-map-guest-house class="mt-0.5 text-sm italic leading-snug"></p>
                                 </hgroup>
-                                <!-- Deadline note (map.js); hidden on short screens. -->
+                                <!-- "Your choices are sealed" after the deadline (map.js); hidden on short screens. Before the deadline the date is in the changes dialog. -->
                                 <div data-map-changes class="hidden flex-col items-center gap-0.5 text-[10px] italic leading-snug text-charcoal/80 short:!hidden">
                                     <p data-map-change-note></p>
                                 </div>
                                 <button data-map-close type="button"
-                                    class="group/close relative inline-flex min-h-11 items-center gap-1.5 px-2 text-sm italic text-charcoal/85 transition-[color,transform] duration-200 hover:text-charcoal active:scale-95 focus:outline-none focus-visible:outline-none">
+                                    class="group/close pointer-events-none relative inline-flex min-h-11 items-center gap-1.5 px-2 text-sm italic text-charcoal/85 transition-[color,transform] duration-200 hover:text-charcoal active:scale-95 focus:outline-none focus-visible:outline-none">
                                     <!-- Ink flourishes; the right one is mirrored. -->
                                     <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
                                         class="h-3 w-8 shrink-0 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100">
                                         <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
                                     </svg>
-                                    <span class="underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 group-hover/close:decoration-charcoal/60 group-focus-visible/close:decoration-charcoal">Mischief managed</span>
+                                    <span class="pointer-events-auto cursor-pointer py-2.5 underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 group-hover/close:decoration-charcoal/60 group-focus-visible/close:decoration-charcoal">Mischief managed</span>
                                     <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
                                         class="h-3 w-8 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100">
                                         <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
@@ -153,12 +218,46 @@
                                         <path d="M5 0 6 4 10 5 6 6 5 10 4 6 0 5 4 4Z" />
                                     </svg>
                                 </button>
-                                <!-- Change link shown by map.js when changes are allowed. -->
-                                <div class="flex items-center justify-center gap-4 text-[10px] italic text-charcoal/70">
-                                    <a data-map-change-response href="./rsvp/?edit=1"
-                                        class="hidden underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal">Change RSVP</a>
+                                <!-- "Make changes" is shown by map-changes.js while changes are allowed; it opens the changes dialog. -->
+                                <!-- Small ink flourishes on both sides, like "Mischief managed"; the right one is mirrored. -->
+                                <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs italic text-charcoal/90 short:gap-x-2 short:text-[11px]">
+                                    <button data-map-changes-open type="button" aria-haspopup="dialog" aria-controls="map-changes-dialog"
+                                        class="group/link hidden items-center gap-1 italic transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal">
+                                        <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                                            class="h-2 w-5 shrink-0 opacity-60 transition-opacity duration-200 group-hover/link:opacity-100 group-focus-visible/link:opacity-100">
+                                            <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                        </svg>
+                                        <span class="underline decoration-charcoal/60 decoration-1 underline-offset-[3px] transition-colors duration-200 group-hover/link:decoration-charcoal group-focus-visible/link:decoration-charcoal">Make changes</span>
+                                        <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                                            class="h-2 w-5 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/link:opacity-100 group-focus-visible/link:opacity-100">
+                                            <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                        </svg>
+                                    </button>
+                                    <!-- "House Cup" is shown by map-house-cup.js for sorted guests, also after the deadline. -->
+                                    <button data-map-house-cup-open type="button" aria-haspopup="dialog" aria-controls="map-house-cup-dialog"
+                                        class="group/link hidden items-center gap-1 italic transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal">
+                                        <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                                            class="h-2 w-5 shrink-0 opacity-60 transition-opacity duration-200 group-hover/link:opacity-100 group-focus-visible/link:opacity-100">
+                                            <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                        </svg>
+                                        <span class="underline decoration-charcoal/60 decoration-1 underline-offset-[3px] transition-colors duration-200 group-hover/link:decoration-charcoal group-focus-visible/link:decoration-charcoal">House Cup</span>
+                                        <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                                            class="h-2 w-5 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/link:opacity-100 group-focus-visible/link:opacity-100">
+                                            <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                        </svg>
+                                    </button>
                                     <button data-map-leave type="button"
-                                        class="italic underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal">Sign out</button>
+                                        class="group/link inline-flex items-center gap-1 italic transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal">
+                                        <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                                            class="h-2 w-5 shrink-0 opacity-60 transition-opacity duration-200 group-hover/link:opacity-100 group-focus-visible/link:opacity-100">
+                                            <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                        </svg>
+                                        <span class="underline decoration-charcoal/60 decoration-1 underline-offset-[3px] transition-colors duration-200 group-hover/link:decoration-charcoal group-focus-visible/link:decoration-charcoal">Sign out</span>
+                                        <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                                            class="h-2 w-5 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/link:opacity-100 group-focus-visible/link:opacity-100">
+                                            <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </section>
                         </div>
@@ -189,6 +288,10 @@
                             <path d="M179.6 230 179.6 246 171.6 252 165.2 262 157.2 268 155.6 284 166.8 288" />
                         </svg>
                     </div>
+                    <!-- Name tags above the footsteps; own layer so they don't get the ink's multiply blend. -->
+                    <div data-map-footstep-labels aria-hidden="true"
+                        class="pointer-events-none absolute inset-0 z-20 text-charcoal opacity-0 transition-opacity duration-500 ease-out group-data-[state=open]:delay-[2200ms] group-data-[state=open]:duration-[1400ms] group-data-[state=open]:opacity-100 motion-reduce:hidden">
+                    </div>
                 </div>
 
                 <button data-map-open type="button" aria-label="Open the Marauder's Map"
@@ -207,6 +310,134 @@
             </div>
         </div>
     </main>
+
+    <!-- Changes dialog (map-changes.js): one place for changing dishes, house and RSVP. -->
+    <dialog id="map-changes-dialog" data-map-changes-dialog lang="en" aria-labelledby="map-changes-title"
+        class="max-h-[calc(100dvh-2rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain bg-transparent p-0 font-inkpot text-charcoal [scrollbar-width:none] transition duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] backdrop:bg-black/70 backdrop:backdrop-blur-[2px] backdrop:transition-opacity backdrop:duration-300">
+        <div class="relative">
+            <!-- Stretched (object-fill) so the torn edges stay visible on every side. -->
+            <img src="./assets/images/parchment-cropped.png" alt=""
+                class="pointer-events-none absolute inset-0 h-full w-full select-none object-fill">
+            <div class="relative px-6 pb-10 pt-12 text-center short:px-5 short:pb-7 short:pt-9">
+                <h2 id="map-changes-title" class="text-xl leading-tight short:text-lg">What would you like to change?</h2>
+                <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                    class="mx-auto mt-2 h-3 w-10 opacity-60">
+                    <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                </svg>
+
+                <ul class="mt-4 divide-y divide-charcoal/20 border-y border-charcoal/20 text-left short:mt-3">
+                    <li>
+                        <a href="./cabin/?edit=1"
+                            class="group/option flex items-center gap-3 px-1 py-3 transition-colors duration-200 hover:bg-charcoal/5 focus:outline-none focus-visible:bg-charcoal/5 short:py-2.5">
+                            <span class="flex-1">
+                                <span class="block text-base leading-tight underline decoration-transparent underline-offset-[3px] transition-colors duration-200 group-hover/option:decoration-charcoal/60 group-focus-visible/option:decoration-charcoal">Your dishes</span>
+                                <span class="mt-0.5 block text-xs italic leading-snug text-charcoal/75">Pick something else to bring</span>
+                            </span>
+                            <span aria-hidden="true" class="text-charcoal/50 transition-transform duration-200 group-hover/option:translate-x-0.5 group-hover/option:text-charcoal">&rarr;</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="./sorting/?edit=1"
+                            class="group/option flex items-center gap-3 px-1 py-3 transition-colors duration-200 hover:bg-charcoal/5 focus:outline-none focus-visible:bg-charcoal/5 short:py-2.5">
+                            <span class="flex-1">
+                                <span class="block text-base leading-tight underline decoration-transparent underline-offset-[3px] transition-colors duration-200 group-hover/option:decoration-charcoal/60 group-focus-visible/option:decoration-charcoal">Your house</span>
+                                <span class="mt-0.5 block text-xs italic leading-snug text-charcoal/75">Let the Sorting Hat decide again</span>
+                            </span>
+                            <span aria-hidden="true" class="text-charcoal/50 transition-transform duration-200 group-hover/option:translate-x-0.5 group-hover/option:text-charcoal">&rarr;</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="./rsvp/?edit=1"
+                            class="group/option flex items-center gap-3 px-1 py-3 transition-colors duration-200 hover:bg-charcoal/5 focus:outline-none focus-visible:bg-charcoal/5 short:py-2.5">
+                            <span class="flex-1">
+                                <span class="block text-base leading-tight underline decoration-transparent underline-offset-[3px] transition-colors duration-200 group-hover/option:decoration-charcoal/60 group-focus-visible/option:decoration-charcoal">Your RSVP</span>
+                                <span class="mt-0.5 block text-xs italic leading-snug text-charcoal/75">Change whether you're coming</span>
+                            </span>
+                            <span aria-hidden="true" class="text-charcoal/50 transition-transform duration-200 group-hover/option:translate-x-0.5 group-hover/option:text-charcoal">&rarr;</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <p data-map-changes-deadline class="mt-4 hidden text-[11px] italic leading-snug text-charcoal/75 short:mt-3"></p>
+            </div>
+            <!-- Last in DOM order, so opening the dialog focuses the first option instead of the close button. -->
+            <button data-map-changes-close type="button" aria-label="Close"
+                class="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full text-charcoal/60 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal focus-visible:outline-dashed focus-visible:outline-1 focus-visible:outline-charcoal/50">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-4 w-4">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    </dialog>
+
+    <!-- House Cup dialog (map-house-cup.js): points per house from the easter eggs, like the hourglasses in the Great Hall. -->
+    <dialog id="map-house-cup-dialog" data-map-house-cup-dialog lang="en" aria-labelledby="map-house-cup-title" aria-describedby="map-house-cup-summary"
+        class="max-h-[calc(100dvh-2rem)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain bg-transparent p-0 font-inkpot text-charcoal [scrollbar-width:none] transition duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] backdrop:bg-black/70 backdrop:backdrop-blur-[2px] backdrop:transition-opacity backdrop:duration-300">
+        <div class="relative">
+            <img src="./assets/images/parchment-cropped.png" alt=""
+                class="pointer-events-none absolute inset-0 h-full w-full select-none object-fill">
+            <div class="relative px-6 pb-10 pt-12 text-center short:px-5 short:pb-7 short:pt-9">
+                <h2 id="map-house-cup-title" class="text-xl leading-tight short:text-lg">The House Cup</h2>
+                <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                    class="mx-auto mt-2 h-3 w-10 opacity-60">
+                    <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
+                </svg>
+                <p id="map-house-cup-summary" data-house-cup-summary aria-live="polite" class="mt-2 text-sm italic leading-snug"></p>
+
+                <ul aria-label="Points per house" class="mt-5 flex items-end justify-between gap-2 short:mt-3">
+                    <li data-house-cup-house="gryffindor" class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                        <img src="./assets/images/admin/gryffindor-logo.png" alt="" class="h-10 w-10 object-contain short:h-8 short:w-8">
+                        <!-- The hourglass: fills from the bottom, relative to the leading house (map-house-cup.js). -->
+                        <div aria-hidden="true" class="relative h-36 w-7 overflow-hidden rounded-full border border-charcoal/40 bg-charcoal/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] short:h-24 short:w-6">
+                            <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t from-[#5c0707] to-[#ae2a1f] transition-[height] duration-[1400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"></div>
+                        </div>
+                        <span data-house-cup-points class="text-lg leading-none short:text-base">0</span>
+                        <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">Gryffindor</span>
+                        <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
+                    </li>
+                    <li data-house-cup-house="hufflepuff" class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                        <img src="./assets/images/admin/hufflepuff-logo.png" alt="" class="h-10 w-10 object-contain short:h-8 short:w-8">
+                        <!-- The hourglass: fills from the bottom, relative to the leading house (map-house-cup.js). -->
+                        <div aria-hidden="true" class="relative h-36 w-7 overflow-hidden rounded-full border border-charcoal/40 bg-charcoal/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] short:h-24 short:w-6">
+                            <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t from-[#a8770f] to-[#ecb939] transition-[height] duration-[1400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"></div>
+                        </div>
+                        <span data-house-cup-points class="text-lg leading-none short:text-base">0</span>
+                        <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">Hufflepuff</span>
+                        <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
+                    </li>
+                    <li data-house-cup-house="ravenclaw" class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                        <img src="./assets/images/admin/ravenclaw-logo.png" alt="" class="h-10 w-10 object-contain short:h-8 short:w-8">
+                        <!-- The hourglass: fills from the bottom, relative to the leading house (map-house-cup.js). -->
+                        <div aria-hidden="true" class="relative h-36 w-7 overflow-hidden rounded-full border border-charcoal/40 bg-charcoal/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] short:h-24 short:w-6">
+                            <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t from-[#0e1a40] to-[#2d4a8a] transition-[height] duration-[1400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"></div>
+                        </div>
+                        <span data-house-cup-points class="text-lg leading-none short:text-base">0</span>
+                        <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">Ravenclaw</span>
+                        <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
+                    </li>
+                    <li data-house-cup-house="slytherin" class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                        <img src="./assets/images/admin/slytherin-logo.png" alt="" class="h-10 w-10 object-contain short:h-8 short:w-8">
+                        <!-- The hourglass: fills from the bottom, relative to the leading house (map-house-cup.js). -->
+                        <div aria-hidden="true" class="relative h-36 w-7 overflow-hidden rounded-full border border-charcoal/40 bg-charcoal/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] short:h-24 short:w-6">
+                            <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t from-[#10301c] to-[#2a6b40] transition-[height] duration-[1400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"></div>
+                        </div>
+                        <span data-house-cup-points class="text-lg leading-none short:text-base">0</span>
+                        <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">Slytherin</span>
+                        <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
+                    </li>
+                </ul>
+
+                <p data-house-cup-found class="mt-5 text-xs italic leading-snug text-charcoal/75 short:mt-3"></p>
+            </div>
+            <!-- Last in DOM order, so opening the dialog doesn't put focus on the close button first. -->
+            <button data-map-house-cup-close type="button" aria-label="Close"
+                class="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full text-charcoal/60 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal focus-visible:outline-dashed focus-visible:outline-1 focus-visible:outline-charcoal/50">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-4 w-4">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+            </button>
+        </div>
+    </dialog>
 
     <!-- Declined variant (map.js): a letter instead of the map. -->
     <section data-map-declined lang="en" aria-labelledby="map-declined-title"

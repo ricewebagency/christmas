@@ -652,7 +652,11 @@ async function loadQuestions() {
     return data;
 }
 
-function initSortingQuiz() {
+function initSortingQuiz(guest) {
+    // Guests who already chose dishes are re-sorting; send them back to the map afterwards.
+    const isResorting = Array.isArray(guest?.dishIds) && guest.dishIds.length > 0;
+    const nextPage = isResorting ? 'map' : 'cabin';
+
     const progressEl = document.getElementById('sorting-progress');
     const questionEl = document.getElementById('sorting-question');
     const questionContainerEl = questionEl?.parentElement;
@@ -940,18 +944,18 @@ function initSortingQuiz() {
         });
     }
 
-    // The cabin guard needs the saved house, so wait for the save before leaving.
+    // The next page's guard needs the saved house, so wait for the save before leaving.
     async function navigateToCabinAfterSave() {
         await sortingResultPromise;
-        window.location.href = getPageUrl('cabin');
+        window.location.href = getPageUrl(nextPage);
     }
 
     async function saveSortingResult(payload) {
         try {
             await sendSortingHouseResult(payload);
         } catch (error) {
-            if (isApiError(error, 409) || isApiError(error, 404)) {
-                // House already set (or unknown guest): continue from the actual state.
+            if (isApiError(error, 409) || isApiError(error, 404) || isApiError(error, 403)) {
+                // Not accepted, deadline passed or unknown guest: continue from the actual state.
                 const latestGuest = await getGuest({ refresh: true }).catch(() => null);
                 redirectToPage(getNextStep(latestGuest));
                 return new Promise(() => {});
@@ -1004,7 +1008,7 @@ function initSortingQuiz() {
         chamberButton = document.createElement('button');
         chamberButton.type = 'button';
         chamberButton.className = 'mx-auto !mt-16 inline-flex w-auto max-w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-center font-inkpot text-base text-amber-50/80 transition-colors duration-200 hover:opacity-80 focus:outline-none focus-visible:outline-none sm:text-lg';
-        chamberButton.textContent = 'Go to the Hogwarts Express \u2192';
+        chamberButton.textContent = isResorting ? 'Back to the Marauder\u2019s Map \u2192' : 'Go to the Hogwarts Express \u2192';
         chamberButton.addEventListener('click', handleChamberButtonClick);
         chamberButton.style.opacity = '0';
         chamberButton.style.transition = 'opacity 1400ms ease-out';
@@ -1417,7 +1421,7 @@ async function bootstrapSortingPage() {
     }
 
     await whenDomReady();
-    initSortingQuiz();
+    initSortingQuiz(guest);
 }
 
 void bootstrapSortingPage();

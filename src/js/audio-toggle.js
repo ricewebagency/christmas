@@ -72,6 +72,11 @@
     const ICON_OFF = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/></svg>';
     const ICON_ADMIN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>';
 
+    const BUTTON_BASE_CLASS = "fixed bottom-3 left-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm transition hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 sm:bottom-4 sm:left-4";
+    const BUTTON_ON_CLASS = "bg-neutral-950/30 text-amber-50 opacity-50 hover:bg-neutral-950/60 focus-visible:ring-amber-200/60";
+    // Muted stands out in red so guests notice audio is off and turn it back on.
+    const BUTTON_OFF_CLASS = "bg-neutral-950/30 text-red-400 opacity-100 ring-1 ring-red-500/70 hover:bg-neutral-950/60 hover:text-red-300 focus-visible:ring-red-300";
+
     let button = null;
 
     const render = () => {
@@ -80,6 +85,7 @@
         }
 
         const label = isMuted ? "Audio inschakelen" : "Audio uitschakelen";
+        button.className = `${BUTTON_BASE_CLASS} ${isMuted ? BUTTON_OFF_CLASS : BUTTON_ON_CLASS}`;
         button.innerHTML = isMuted ? ICON_OFF : ICON_ON;
         button.setAttribute("aria-label", label);
         button.setAttribute("aria-pressed", String(isMuted));
@@ -104,7 +110,6 @@
 
         button = document.createElement("button");
         button.type = "button";
-        button.className = "fixed bottom-3 left-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:bottom-4 sm:left-4";
 
         // Keep clicks from reaching page-level bubble handlers (capture-phase audio unlock still runs).
         button.addEventListener("pointerdown", (event) => event.stopPropagation());

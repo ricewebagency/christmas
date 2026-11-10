@@ -1,4 +1,5 @@
 import { isApiError, verifyGuestCode } from './api-client.js';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js';
 
 const CODE_LENGTH = 4;
 
@@ -117,12 +118,7 @@ export function openPinDialog({ message = '', prefill = '', canRetry = false } =
 
         const finish = (guest) => {
             isDone = true;
-            dialog.classList.add('opacity-0', 'backdrop:opacity-0');
-
-            window.setTimeout(() => {
-                dialog.close();
-                resolve(guest);
-            }, 500);
+            void closeDialogAnimated(dialog).then(() => resolve(guest));
         };
 
         const submit = async () => {
@@ -246,7 +242,7 @@ export function openPinDialog({ message = '', prefill = '', canRetry = false } =
         setMessage(message);
         setRetryVisible(canRetry && getCode().length === CODE_LENGTH);
 
-        dialog.showModal();
+        showDialogAnimated(dialog);
         focusDigit(firstEmptyIndex());
     });
 }

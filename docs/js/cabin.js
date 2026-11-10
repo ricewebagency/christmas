@@ -4,7 +4,10 @@ import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDom
 const DEFAULT_CABIN_IMAGE = './assets/images/hogwarts-express-cabin-front-gryffindor.png';
 const BACKDROP_SELECTOR = '[data-cabin-backdrop]';
 const ARRIVAL_AUDIO_SELECTOR = '[data-arrival-audio]';
+const TRAIN_AUDIO_SELECTOR = '[data-train-audio]';
 const TROLLEY_AUDIO_SELECTOR = '[data-trolley-audio]';
+const AMBIENT_AUDIO_FADE_IN_MS = 2000;
+const AUDIO_GESTURE_EVENTS = ['pointerdown', 'touchstart', 'keydown'];
 const TROLLEY_IMAGE_SELECTOR = '[data-trolley-witch]';
 const TROLLEY_SUBTITLE_SELECTOR = '[data-trolley-subtitles]';
 const PARCHMENT_SELECTOR = '[data-parchment-container]';
@@ -20,6 +23,8 @@ const DISH_NEXT_BUTTON_SELECTOR = '[data-dish-next]';
 const DISH_DOTS_SELECTOR = '[data-dish-dots]';
 const DISH_CHOICE_SELECTOR = '[data-dish-choice]';
 const DISH_CONFIRM_SELECTOR = '[data-dish-confirm]';
+const DISH_BACK_SELECTOR = '[data-dish-back]';
+const DISH_PANEL_FADE_MS = 1200;
 const DISH_SELECTED_SUMMARY_SELECTOR = '[data-selected-dish-summary]';
 const DISH_SELECTED_SUMMARY_LABEL_SELECTOR = '[data-selected-dish-label]';
 const DISH_SELECTED_SUMMARY_VALUE_SELECTOR = '[data-selected-dish-value]';
@@ -274,19 +279,57 @@ function getParchmentElement() {
     return parchmentEl instanceof HTMLElement ? parchmentEl : null;
 }
 
-function initArrivalAudio() {
-    const arrivalAudio = document.querySelector(ARRIVAL_AUDIO_SELECTOR);
+function fadeInAudio(audio, targetVolume, durationMs = AMBIENT_AUDIO_FADE_IN_MS) {
+    const startedAt = performance.now();
 
-    if (!(arrivalAudio instanceof HTMLAudioElement)) {
+    const step = (timestamp) => {
+        const progress = Math.min((timestamp - startedAt) / durationMs, 1);
+        audio.volume = targetVolume * progress * progress;
+
+        if (progress < 1 && !audio.paused) {
+            window.requestAnimationFrame(step);
+        }
+    };
+
+    window.requestAnimationFrame(step);
+}
+
+// Starts at volume 0 and fades in; if autoplay is blocked, retries on the first user gesture.
+function playAmbientAudio(audio, targetVolume) {
+    if (!(audio instanceof HTMLAudioElement)) {
         return;
     }
 
-    arrivalAudio.volume = 0.5;
-    arrivalAudio.muted = false;
+    audio.muted = false;
+    audio.volume = 0;
 
-    void arrivalAudio.play().catch(() => {
-        // Browsers may block autoplay until a user interaction; the audio element is still configured correctly.
+    const attemptPlay = () => audio.play().then(() => {
+        fadeInAudio(audio, targetVolume);
+    }).catch((error) => {
+        if (error?.name !== 'NotAllowedError' || audio.dataset.retryOnGesturePending === '1') {
+            return;
+        }
+
+        audio.dataset.retryOnGesturePending = '1';
+
+        const retryOnGesture = () => {
+            if (audio.dataset.retryOnGesturePending !== '1') {
+                return;
+            }
+
+            audio.dataset.retryOnGesturePending = '0';
+            AUDIO_GESTURE_EVENTS.forEach((eventName) => document.removeEventListener(eventName, retryOnGesture, true));
+            void attemptPlay();
+        };
+
+        AUDIO_GESTURE_EVENTS.forEach((eventName) => document.addEventListener(eventName, retryOnGesture, true));
     });
+
+    void attemptPlay();
+}
+
+function initArrivalAudio() {
+    playAmbientAudio(document.querySelector(ARRIVAL_AUDIO_SELECTOR), 0.5);
 }
 
 function initScreenLoader() {
@@ -306,18 +349,7 @@ function initScreenLoader() {
 }
 
 function initTrainAudio() {
-    const trainAudio = document.querySelector('[data-train-audio]');
-
-    if (!(trainAudio instanceof HTMLAudioElement)) {
-        return;
-    }
-
-    trainAudio.volume = 0.05;
-    trainAudio.muted = false;
-
-    void trainAudio.play().catch(() => {
-        // Browsers may block autoplay until a user interaction; the audio element is still configured correctly.
-    });
+    playAmbientAudio(document.querySelector(TRAIN_AUDIO_SELECTOR), 0.05);
 }
 
 function revealParchment() {
@@ -769,6 +801,28 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         dishPanel.classList.remove('pointer-events-none');
     };
 
+    const revealIntroPanel = () => {
+        if (!dishPanel.classList.contains('opacity-100')) {
+            return;
+        }
+
+        dishPanel.classList.remove('opacity-100', 'pointer-events-auto');
+        dishPanel.classList.add('pointer-events-none', 'translate-y-1');
+
+        window.setTimeout(() => {
+            dishPanel.classList.remove('flex');
+            dishPanel.classList.add('hidden');
+
+            introPanel.classList.remove('hidden');
+            introButton.classList.remove('pointer-events-none', 'opacity-0');
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    introPanel.classList.remove('opacity-0', 'pointer-events-none');
+                });
+            });
+        }, DISH_PANEL_FADE_MS);
+    };
+
     const showDishPanelImmediately = () => {
         introPanel.classList.add('hidden', 'opacity-0', 'pointer-events-none');
         dishPanel.classList.remove('hidden', 'pointer-events-none', 'translate-y-1');
@@ -799,6 +853,14 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         introButton.classList.add('pointer-events-none', 'opacity-0');
         revealDishPanel();
     });
+
+    const backButton = document.querySelector(DISH_BACK_SELECTOR);
+    if (backButton instanceof HTMLButtonElement) {
+        backButton.addEventListener('click', () => {
+            backButton.blur();
+            revealIntroPanel();
+        });
+    }
 
     dishButtons.forEach((button) => {
         if (!(button instanceof HTMLButtonElement)) {
