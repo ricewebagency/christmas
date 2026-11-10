@@ -1,5 +1,46 @@
 [
   {
+    "fileName": "Lumos! Light for the tree, light for the hall, light for us all.mp3",
+    "sentences": [
+      { "text": "Lumos!", "durationMs": 1000 },
+      { "text": "Light for the tree, light for the hall, light for us all.", "durationMs": 3800 }
+    ]
+  },
+  {
+    "fileName": "Lumos! Now... where did I leave my lemon drops.mp3",
+    "sentences": [
+      { "text": "Lumos!", "durationMs": 1200 },
+      { "text": "Now... where did I leave my lemon drops?", "durationMs": 4000 }
+    ]
+  },
+  {
+    "fileName": "A little light for the season of giving. Lumos!.mp3",
+    "sentences": [
+      { "text": "A little light for the season of giving.", "durationMs": 3400 },
+      { "text": "Lumos!", "durationMs": 1300 }
+    ]
+  },
+  {
+    "fileName": "Nox (2).mp3",
+    "sentences": [
+      { "text": "Nox.", "durationMs": 800 }
+    ]
+  },
+  {
+    "fileName": "Nox. Do mind your step, for there is no light.mp3",
+    "sentences": [
+      { "text": "Nox.", "durationMs": 1100 },
+      { "text": "Do mind your step, for there is no light.", "durationMs": 3700 }
+    ]
+  },
+  {
+    "fileName": "Nox. I do hope nobody trips over the Christmas tree.mp3",
+    "sentences": [
+      { "text": "Nox.", "durationMs": 1000 },
+      { "text": "I do hope nobody trips over the Christmas tree.", "durationMs": 3100 }
+    ]
+  },
+  {
     "fileName": "first-find.mp3",
     "sentences": [
       {
@@ -71,6 +112,15 @@
     ]
   },
   {
+    "fileName": "revelio-spell-cast.mp3",
+    "sentences": [
+      {
+        "text": "Revelio!",
+        "durationMs": 1500
+      }
+    ]
+  },
+  {
     "fileName": "more-secrets.mp3",
     "sentences": [
       {
@@ -116,6 +166,42 @@
       {
         "text": "The map rewards those who look closely.",
         "durationMs": 2400
+      }
+    ]
+  },
+  {
+    "fileName": "ten-points-to-gryffindor.mp3",
+    "sentences": [
+      {
+        "text": "Ten points to Gryffindor!",
+        "durationMs": 2050
+      }
+    ]
+  },
+  {
+    "fileName": "ten-points-to-hufflepuff.mp3",
+    "sentences": [
+      {
+        "text": "Ten points to Hufflepuff!",
+        "durationMs": 2100
+      }
+    ]
+  },
+  {
+    "fileName": "ten-points-to-ravenclaw.mp3",
+    "sentences": [
+      {
+        "text": "Ten points to Ravenclaw!",
+        "durationMs": 2350
+      }
+    ]
+  },
+  {
+    "fileName": "ten-points-to-slytherin.mp3",
+    "sentences": [
+      {
+        "text": "Ten points to Slytherin!",
+        "durationMs": 1950
       }
     ]
   },

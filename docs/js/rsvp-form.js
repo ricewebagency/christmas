@@ -1,6 +1,6 @@
-import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js';
-import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js';
-import { getRandomExitDelayMs } from './page-transitions.js';
+import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=0d22dc9828';
+import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=0d22dc9828';
+import { getRandomExitDelayMs } from './page-transitions.js?v=0d22dc9828';
 
 const ATTENDANCE_CHOICE_MAP = {
     yes: 'accepted',

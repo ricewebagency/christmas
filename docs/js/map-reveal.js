@@ -1,7 +1,8 @@
 // Revelio: the theme party details stay hidden until the guest casts the spell.
 // States on [data-map-reveal-root] (data-spell): hidden -> casting -> revealed.
 // Timings match the revelio* animations in tailwind.config.js.
-import { playMapSound } from './map-sounds.js';
+import { playMapSound } from './map-sounds.js?v=0d22dc9828';
+import { showSubtitlesFor } from './map-dumbledore.js?v=0d22dc9828';
 
 const SPARK_DELAY_MS = 250;
 const REVEAL_DELAY_MS = 1000;
@@ -63,7 +64,6 @@ export function initMapReveal() {
     const rootEl = document.querySelector('[data-map-reveal-root]');
     const buttonEl = document.querySelector('[data-map-reveal]');
     const contentEl = document.querySelector('[data-map-reveal-content]');
-    const spellEl = document.querySelector('[data-map-reveal-spell]');
     const sparksEl = document.querySelector('[data-map-reveal-sparks]');
     const sigilEl = document.querySelector('[data-map-reveal-sigil]');
     const titleEl = document.getElementById('map-event-title');
@@ -83,8 +83,6 @@ export function initMapReveal() {
         titleEl?.focus({ preventScroll: true });
     };
 
-    spellEl?.addEventListener('animationend', () => setShown(spellEl, false));
-
     buttonEl.addEventListener('click', () => {
         if (rootEl.dataset.spell !== 'hidden') {
             return;
@@ -92,6 +90,8 @@ export function initMapReveal() {
 
         // The spell fades out as the twinkle (ink appearing) takes over.
         playMapSound('spell', 0, { fadeAfterMs: REVEAL_DELAY_MS - 200, fadeMs: 700 });
+        playMapSound('revelioVoice');
+        void showSubtitlesFor('revelio-spell-cast');
 
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             reveal();
@@ -101,7 +101,6 @@ export function initMapReveal() {
         playMapSound('twinkle', REVEAL_DELAY_MS);
 
         rootEl.dataset.spell = 'casting';
-        setShown(spellEl, true);
         later(() => burstSparks(sparksEl, sigilEl), SPARK_DELAY_MS);
         later(reveal, REVEAL_DELAY_MS);
     });
@@ -110,7 +109,6 @@ export function initMapReveal() {
     const reset = () => {
         timers.splice(0).forEach((timer) => window.clearTimeout(timer));
         sparksEl?.replaceChildren();
-        setShown(spellEl, false);
         setShown(contentEl, false);
         setShown(buttonEl, true);
         buttonEl.setAttribute('aria-expanded', 'false');

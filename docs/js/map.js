@@ -1,12 +1,12 @@
-import { fetchDishCatalog } from './api-client.js';
-import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js';
-import { initMapChangesDialog } from './map-changes.js';
-import { initMapEasterEggs } from './map-easter-eggs.js';
-import { initMapFootsteps } from './map-footsteps.js';
-import { initMapHouseCup } from './map-house-cup.js';
-import { initMapReveal } from './map-reveal.js';
-import { createEggRewards } from './map-rewards.js';
-import { playMapSound, preloadMapSounds } from './map-sounds.js';
+import { fetchDishCatalog } from './api-client.js?v=0d22dc9828';
+import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=0d22dc9828';
+import { initMapChangesDialog } from './map-changes.js?v=0d22dc9828';
+import { initMapEasterEggs } from './map-easter-eggs.js?v=0d22dc9828';
+import { initMapFootsteps } from './map-footsteps.js?v=0d22dc9828';
+import { initMapHouseCup } from './map-house-cup.js?v=0d22dc9828';
+import { initMapReveal } from './map-reveal.js?v=0d22dc9828';
+import { createEggRewards } from './map-rewards.js?v=0d22dc9828';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=0d22dc9828';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
@@ -16,6 +16,8 @@ const MAP_PEEK_START = 0.25;
 const MAP_PEEK_END = 0.6;
 // The flap lifts twice per peek: from 25% and again from 43% (tailwind.config.js).
 const MAP_PEEK_LIFTS = [MAP_PEEK_START, 0.43];
+// Start the peek sound slightly before each lift so it lines up with the visible motion.
+const MAP_PEEK_SOUND_LEAD_MS = 100;
 // Longest closing transition: scale delay 1000ms + 1600ms duration.
 const MAP_CLOSE_DURATION_MS = 2700;
 // Flap delays in map/index.html (open: bottom 300ms, top 1000ms; closing: the reverse).
@@ -76,8 +78,11 @@ function initMap(guest) {
     updateClosedScale(mapEl, scaleEl);
     const footsteps = initMapFootsteps(mapEl);
     const houseCup = initMapHouseCup(guest);
-    const rewards = createEggRewards(guest, { onStandings: (points, foundCount) => houseCup?.update(points, foundCount) });
-    initMapEasterEggs(mapEl, { footsteps, guestName: guest?.guestName, onFound: rewards.found });
+    const rewards = createEggRewards(guest, {
+        onStandings: (points, foundCount) => houseCup?.update(points, foundCount),
+        cup: houseCup
+    });
+    initMapEasterEggs(mapEl, { footsteps, guestName: guest?.guestName, onFound: rewards.found, isFound: rewards.hasFound });
     const mapReveal = initMapReveal();
     preloadMapSounds();
     window.addEventListener('resize', () => updateClosedScale(mapEl, scaleEl));
@@ -90,20 +95,24 @@ function initMap(guest) {
 
     const bottomFlapEl = document.querySelector('[data-map-flap="bottom"]');
     let isOpening = false;
+    let hasPeeked = false;
 
     // One peek sound per flap lift in each mapPeek iteration (MAP_PEEK_LIFTS).
+    // Only the first peek plays at full volume; later ones at half.
     const schedulePeekSound = (event) => {
         if (event.animationName !== 'mapPeek' || event.target !== bottomFlapEl) {
             return;
         }
 
+        const volume = hasPeeked ? 0.5 : 1;
+        hasPeeked = true;
         const peekDurationMs = getPeekDurationMs(bottomFlapEl);
         MAP_PEEK_LIFTS.forEach((lift) => {
             window.setTimeout(() => {
                 if (mapEl.dataset.state === 'closed' && !isOpening) {
-                    playMapSound('peek');
+                    playMapSound('peek', 0, { volume });
                 }
-            }, lift * peekDurationMs);
+            }, Math.max(0, lift * peekDurationMs - MAP_PEEK_SOUND_LEAD_MS));
         });
     };
 

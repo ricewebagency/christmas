@@ -3,6 +3,7 @@ import { mkdirSync, cpSync, copyFileSync, existsSync, rmSync, readFileSync, writ
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
+import { computeVersion, versionHtml, versionJs } from "./cache-bust.mjs";
 
 function writeFileWithRetry(filePath, content, encoding = "utf8") {
   const maxAttempts = 3;
@@ -109,13 +110,56 @@ function removePath(p) {
   if (existsSync(p)) rmSync(p, { recursive: true, force: true });
 }
 
+let version = computeVersion(SRC);
+
 function renderHtmlFile(source) {
   const dest = toDocsPath(source);
-  const html = injectPageBase(renderHtmlWithPartials(source), source);
+  const html = versionHtml(injectPageBase(renderHtmlWithPartials(source), source), version);
 
   ensureDirs();
   mkdirSync(path.dirname(dest), { recursive: true });
   writeFileWithRetry(dest, html, "utf8");
+}
+
+function isJsFile(p) {
+  return path.extname(p) === ".js";
+}
+
+function copyJsFile(source) {
+  const dest = toDocsPath(source);
+
+  ensureDirs();
+  mkdirSync(path.dirname(dest), { recursive: true });
+  writeFileWithRetry(dest, versionJs(readFileSync(source, "utf8"), version), "utf8");
+}
+
+function copySourceFile(source) {
+  if (isJsFile(source)) {
+    copyJsFile(source);
+    return;
+  }
+
+  copyFile(source, toDocsPath(source));
+}
+
+// A code change gives a new version, so every page and module must point at the new URLs.
+function refreshVersion() {
+  const nextVersion = computeVersion(SRC);
+
+  if (nextVersion === version) return false;
+
+  version = nextVersion;
+  renderAllHtmlFiles();
+
+  for (const file of walkFiles(SRC)) {
+    if (isJsFile(file) && !isInPartials(file)) copyJsFile(file);
+  }
+
+  return true;
+}
+
+function isCodeFile(p) {
+  return [".html", ".js", ".css"].includes(path.extname(p)) && !p.startsWith(path.join(SRC, "assets") + path.sep);
 }
 
 function walkFiles(dir, files = []) {
@@ -162,7 +206,7 @@ function initialSync() {
       continue;
     }
 
-    copyFile(file, toDocsPath(file));
+    copySourceFile(file);
   }
 }
 
@@ -207,38 +251,34 @@ const watcher = chokidar.watch(
   { ignoreInitial: true }
 );
 
+function handleAddOrChange(p) {
+  // A new version re-renders every page and module, this one included.
+  if (isCodeFile(p) && refreshVersion()) {
+    if (!isHtmlFile(p) && !isJsFile(p) && !isInPartials(p)) copyFile(p, toDocsPath(p));
+    return;
+  }
+
+  if (isInPartials(p)) {
+    if (isHtmlFile(p)) {
+      renderAllHtmlFiles();
+    }
+    return;
+  }
+
+  if (isHtmlFile(p)) {
+    renderHtmlFile(p);
+    return;
+  }
+
+  copySourceFile(p);
+}
+
 watcher
-  .on("add", (p) => {
-    if (isInPartials(p)) {
-      if (isHtmlFile(p)) {
-        renderAllHtmlFiles();
-      }
-      return;
-    }
-
-    if (isHtmlFile(p)) {
-      renderHtmlFile(p);
-      return;
-    }
-
-    copyFile(p, toDocsPath(p));
-  })
-  .on("change", (p) => {
-    if (isInPartials(p)) {
-      if (isHtmlFile(p)) {
-        renderAllHtmlFiles();
-      }
-      return;
-    }
-
-    if (isHtmlFile(p)) {
-      renderHtmlFile(p);
-      return;
-    }
-
-    copyFile(p, toDocsPath(p));
-  })
+  .on("add", handleAddOrChange)
+  .on("change", handleAddOrChange)
   .on("unlink", (p) => {
+    if (isCodeFile(p)) refreshVersion();
+
     if (isInPartials(p)) {
       if (isHtmlFile(p)) {
         renderAllHtmlFiles();

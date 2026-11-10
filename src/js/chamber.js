@@ -94,7 +94,7 @@ const BASILISK_PRELOADS = [
 
 async function loadBasiliskDialogue() {
     try {
-        const response = await fetch('./assets/files/chamber-dialogues.json');
+        const response = await fetch('./assets/files/chamber-dialogues.json', { cache: 'no-cache' });
 
         if (!response.ok) {
             throw new Error(`Failed to load chamber dialogues: ${response.status}`);

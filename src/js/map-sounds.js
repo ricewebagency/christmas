@@ -6,8 +6,14 @@ const SOUNDS = {
     woosh: { src: './assets/music/map/christmas-wind-woosh.mp3', volume: 0.12 },
     footsteps: { src: './assets/music/map/footsteps.mp3', volume: 0.22 },
     paper: { src: './assets/music/map/paper-rustle.mp3', volume: 0.7 },
+    // Opening a parchment popup (House Cup, pincode). `instant`: played through Web Audio from a decoded buffer,
+    // so it starts together with the popup (an <audio> element needs a moment to get going).
+    // `offset`: seconds skipped at the start of the clip, so the sound lands right on the tap.
+    popup: { src: './assets/music/map/open-pop-up.mp3', volume: 0.3, instant: true, offset: 0.4 },
     peek: { src: './assets/music/peek.mp3', volume: 0.03 },
     spell: { src: './assets/music/map/magic-spell.mp3', volume: 0.5 },
+    // Dumbledore saying the incantation when the guest casts Revelio.
+    revelioVoice: { src: './assets/music/dumbledore/revelio-spell-cast.mp3', volume: 0.9 },
     spin: { src: './assets/images/map/paper-spin.mp3', volume: 0.2 },
     twinkle: { src: './assets/music/map/magic-twinkle.mp3', volume: 0.45 }
 };
@@ -24,8 +30,100 @@ function getTemplate(name) {
     return templates.get(name);
 }
 
-export function preloadMapSounds() {
-    Object.keys(SOUNDS).forEach(getTemplate);
+// Web Audio for `instant` sounds. Web Audio bypasses the play() hook in audio-toggle.js, so the mute state
+// is read from the same storage key (keep in sync there).
+const MUTED_STORAGE_KEY = 'audio-muted';
+const buffers = new Map();
+let audioContext = null;
+
+function isMuted() {
+    try {
+        return window.localStorage.getItem(MUTED_STORAGE_KEY) === 'true';
+    } catch {
+        return false;
+    }
+}
+
+function getAudioContext() {
+    if (!audioContext) {
+        const Context = window.AudioContext || window.webkitAudioContext;
+
+        if (!Context) {
+            return null;
+        }
+
+        audioContext = new Context();
+        // Browsers start it suspended until a user gesture; resume on the first one.
+        const unlock = () => {
+            void audioContext.resume().catch(() => {});
+        };
+        document.addEventListener('pointerdown', unlock, { capture: true });
+        document.addEventListener('keydown', unlock, { capture: true });
+    }
+
+    return audioContext;
+}
+
+function loadBuffer(name) {
+    const context = getAudioContext();
+
+    if (!context || buffers.has(name)) {
+        return;
+    }
+
+    buffers.set(name, null);
+    fetch(SOUNDS[name].src)
+        .then((response) => response.arrayBuffer())
+        .then((data) => context.decodeAudioData(data))
+        .then((buffer) => buffers.set(name, buffer))
+        .catch(() => buffers.delete(name));
+}
+
+// Returns false when the buffer isn't ready yet, so the caller falls back to an <audio> element.
+function playInstant(name, volume) {
+    const buffer = buffers.get(name);
+    const context = audioContext;
+
+    if (!buffer || !context) {
+        return false;
+    }
+
+    if (isMuted()) {
+        return true;
+    }
+
+    const start = () => {
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        source.buffer = buffer;
+        gain.gain.value = Math.min(1, SOUNDS[name].volume * volume);
+        source.connect(gain).connect(context.destination);
+        source.start(0, Math.min(SOUNDS[name].offset ?? 0, buffer.duration));
+    };
+
+    if (context.state === 'running') {
+        start();
+        return true;
+    }
+
+    // Still suspended: only play if resuming succeeds right away, never as a stray sound on a later tap.
+    const requestedAt = performance.now();
+    context.resume().then(() => {
+        if (context.state === 'running' && performance.now() - requestedAt < 300) {
+            start();
+        }
+    }).catch(() => {});
+    return true;
+}
+
+export function preloadMapSounds(names = Object.keys(SOUNDS)) {
+    names.forEach((name) => {
+        getTemplate(name);
+
+        if (SOUNDS[name]?.instant) {
+            loadBuffer(name);
+        }
+    });
 }
 
 // Ramps the volume from its current level to `target` over `durationMs`. Starting a new ramp
@@ -61,8 +159,21 @@ export function playMapSound(name, delayMs = 0, { rate = 1, volume = 1, fadeInMs
         return;
     }
 
+    if (SOUNDS[name].instant && delayMs === 0 && playInstant(name, volume)) {
+        return;
+    }
+
     window.setTimeout(() => {
         const audio = template.cloneNode();
+
+        if (SOUNDS[name].offset) {
+            try {
+                audio.currentTime = SOUNDS[name].offset;
+            } catch {
+                // Not seekable yet: start from the top.
+            }
+        }
+
         const targetVolume = Math.min(1, SOUNDS[name].volume * volume);
         audio.volume = fadeInMs > 0 ? 0 : targetVolume;
         audio.preservesPitch = false;

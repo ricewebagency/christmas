@@ -4,16 +4,16 @@ import {
     pathEndsWith,
     runRevealExitSequence,
     setupLinkExitTransition
-} from "./page-transitions.js";
+} from "./page-transitions.js?v=0d22dc9828";
 import {
     clearGuestCode,
     getStoredGuestCode,
     readGuestCodeFromUrl,
     removeGuestCodeFromUrl,
     verifyGuestCode
-} from "./api-client.js";
-import { getNextStep, getPageName, getPageUrl, whenDomReady } from "./guest-flow.js";
-import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js";
+} from "./api-client.js?v=0d22dc9828";
+import { getNextStep, getPageName, getPageUrl, whenDomReady } from "./guest-flow.js?v=0d22dc9828";
+import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js?v=0d22dc9828";
 
 const RSVP_LABELS = {
     pending: "Awaiting your response",

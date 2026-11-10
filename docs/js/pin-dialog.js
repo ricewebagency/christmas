@@ -1,7 +1,11 @@
-import { isApiError, verifyGuestCode } from './api-client.js';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js';
+import { isApiError, verifyGuestCode } from './api-client.js?v=0d22dc9828';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=0d22dc9828';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=0d22dc9828';
 
 const CODE_LENGTH = 4;
+
+// Load the popup sound as soon as the page loads, so the dialog doesn't wait for the download.
+preloadMapSounds(['popup']);
 
 const MESSAGES = {
     unknown: 'That password is not invited to Christmas at the Great Hall.',
@@ -242,6 +246,7 @@ export function openPinDialog({ message = '', prefill = '', canRetry = false } =
         setMessage(message);
         setRetryVisible(canRetry && getCode().length === CODE_LENGTH);
 
+        playMapSound('popup');
         showDialogAnimated(dialog);
         focusDigit(firstEmptyIndex());
     });

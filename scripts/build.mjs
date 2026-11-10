@@ -2,6 +2,7 @@ import { rmSync, mkdirSync, cpSync, existsSync, readdirSync, copyFileSync } from
 import { readFileSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { computeVersion, versionHtml, versionJs } from "./cache-bust.mjs";
 
 const SRC = "src";
 const DOCS = "docs";
@@ -76,18 +77,27 @@ function clean() {
 }
 
 function copyStatic() {
+  const version = computeVersion(SRC);
+
   // kopieer alle .html bestanden in src root
   for (const file of readdirSync(SRC)) {
     if (file.endsWith(".html")) {
       const fromPath = path.join(SRC, file);
       const toPath = path.join(DOCS, file);
-      const renderedHtml = injectPageBase(renderHtmlWithPartials(fromPath), fromPath);
+      const renderedHtml = versionHtml(injectPageBase(renderHtmlWithPartials(fromPath), fromPath), version);
 
       writeFileSync(toPath, renderedHtml, "utf8");
     }
   }
 
   cpSync(`${SRC}/js`, `${DOCS}/js`, { recursive: true, force: true });
+
+  for (const file of readdirSync(`${DOCS}/js`)) {
+    if (file.endsWith(".js")) {
+      const filePath = path.join(DOCS, "js", file);
+      writeFileSync(filePath, versionJs(readFileSync(filePath, "utf8"), version), "utf8");
+    }
+  }
   cpSync(`${SRC}/assets`, `${DOCS}/assets`, { recursive: true, force: true });
 
   // kopieer root-bestanden die direct in docs moeten staan

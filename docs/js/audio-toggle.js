@@ -2,6 +2,7 @@
 // Load as a classic (non-deferred) script in <head> so the play() hook is installed
 // before any other script creates or plays audio.
 (() => {
+    // map-sounds.js reads this key too for its Web Audio sounds; keep it in sync there.
     const STORAGE_KEY = "audio-muted";
     // Written by api-client.js from the API's `isAdmin` for the guest's pincode; keep the key in sync there.
     const GUEST_ADMIN_KEY = "christmas-at-the-great-hall.guest-is-admin";
@@ -124,7 +125,13 @@
         renderAdminLink();
         // api-client.js fires this whenever fresh guest state arrives (also on this page).
         window.addEventListener("guest-admin-change", renderAdminLink);
+        // map-house-cup.js fires this when its button appears between the volume and admin buttons.
+        window.addEventListener("house-cup-visible", renderAdminLink);
     };
+
+    // One slot up while the map's House Cup button takes the slot above the volume button.
+    const ADMIN_POSITION_CLASS = "bottom-[3.25rem] sm:bottom-14";
+    const ADMIN_POSITION_ABOVE_HOUSE_CUP_CLASS = "bottom-[5.75rem] sm:bottom-24";
 
     let adminLink = null;
 
@@ -138,7 +145,6 @@
         if (!adminLink) {
             adminLink = document.createElement("a");
             adminLink.href = ADMIN_URL;
-            adminLink.className = "fixed bottom-[3.25rem] left-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:bottom-14 sm:left-4";
             adminLink.innerHTML = ICON_ADMIN;
             adminLink.setAttribute("aria-label", "Admin Panel");
             adminLink.title = "Admin Panel";
@@ -146,6 +152,9 @@
             adminLink.addEventListener("click", (event) => event.stopPropagation());
             document.body.appendChild(adminLink);
         }
+
+        const position = "houseCupVisible" in document.body.dataset ? ADMIN_POSITION_ABOVE_HOUSE_CUP_CLASS : ADMIN_POSITION_CLASS;
+        adminLink.className = `fixed left-3 z-[1000] flex h-8 w-8 items-center justify-center rounded-full bg-neutral-950/30 text-amber-50 opacity-50 backdrop-blur-sm transition hover:bg-neutral-950/60 hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-amber-200/60 sm:left-4 ${position}`;
     };
 
     window.isAudioMuted = () => isMuted;

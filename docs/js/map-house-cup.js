@@ -1,8 +1,9 @@
-import { EASTER_EGG_COUNT } from './api-client.js';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js';
+import { EASTER_EGG_COUNT } from './api-client.js?v=0d22dc9828';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=0d22dc9828';
+import { playMapSound } from './map-sounds.js?v=0d22dc9828';
 
-// "House Cup" on the map: an hourglass per house, filled relative to the leading house. Shown to sorted guests,
-// also after the change deadline. Standings come with the guest state and are refreshed after every egg find.
+// "House Cup" on the map: an hourglass per house, filled relative to the leading house. The button sits bottom-left
+// and is shown once the guest has filled in everything, also after the change deadline. Standings come with the guest state and are refreshed after every egg find.
 const HOUSE_NAMES = { gryffindor: 'Gryffindor', hufflepuff: 'Hufflepuff', ravenclaw: 'Ravenclaw', slytherin: 'Slytherin' };
 // An empty-looking glass reads as "no data"; a sliver of sand reads as "nothing yet".
 const MIN_FILL_PERCENT = 3;
@@ -23,12 +24,19 @@ function describeStandings(points) {
     return `${leaders.slice(0, -1).join(', ')} and ${leaders.at(-1)} share the lead.`;
 }
 
-// Returns { update(points, foundCount) } for live updates after an egg find, or null when there's no House Cup.
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Returns { update(points, foundCount), target(), pulse(glow) } for live updates after an egg find, or null when
+// there's no House Cup. target() is the button's centre on screen (null while it isn't shown); pulse(glow) lights it
+// up in a house colour as earned points land in it.
 export function initMapHouseCup(guest) {
     const dialog = document.querySelector('[data-map-house-cup-dialog]');
     const openButton = document.querySelector('[data-map-house-cup-open]');
 
-    if (!(dialog instanceof HTMLDialogElement) || !(openButton instanceof HTMLElement) || !guest?.house) {
+    // Only once the guest has filled in everything: accepted, sorted and dishes chosen.
+    const isComplete = guest?.rsvpStatus === 'accepted' && Boolean(guest.house) && guest.dishIds?.length > 0;
+
+    if (!(dialog instanceof HTMLDialogElement) || !(openButton instanceof HTMLElement) || !isComplete) {
         return null;
     }
 
@@ -43,6 +51,7 @@ export function initMapHouseCup(guest) {
 
     let points = { ...guest.housePoints };
     let foundCount = guest.foundEggIds?.length ?? 0;
+    let pulseAnimation = null;
 
     const renderFill = () => {
         const max = Math.max(...Object.values(points));
@@ -89,9 +98,13 @@ export function initMapHouseCup(guest) {
 
     const close = () => void closeDialogAnimated(dialog).then(emptyFill);
 
-    openButton.addEventListener('click', () => {
+    // Like the volume and admin buttons: keep taps away from page-level handlers (easter eggs, audio unlock).
+    openButton.addEventListener('pointerdown', (event) => event.stopPropagation());
+    openButton.addEventListener('click', (event) => {
+        event.stopPropagation();
         renderText();
         emptyFill();
+        playMapSound('popup');
         showDialogAnimated(dialog);
         // Commit the empty glasses first, so the sand pours in.
         void dialog.offsetWidth;
@@ -115,7 +128,10 @@ export function initMapHouseCup(guest) {
     });
 
     openButton.classList.remove('hidden');
-    openButton.classList.add('inline-flex');
+    openButton.classList.add('flex');
+    // audio-toggle.js moves the admin button up one slot while this is set; the event covers an admin button that's already there.
+    document.body.dataset.houseCupVisible = '';
+    window.dispatchEvent(new CustomEvent('house-cup-visible'));
 
     return {
         update(nextPoints, nextFoundCount) {
@@ -126,6 +142,28 @@ export function initMapHouseCup(guest) {
                 renderText();
                 renderFill();
             }
+        },
+
+        target() {
+            const rect = openButton.getBoundingClientRect();
+            return rect.width > 0 ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
+        },
+
+        pulse(glow) {
+            // Back to whatever the button shows right now (dimmed, or full while hovered or focused).
+            pulseAnimation?.cancel();
+            const rest = getComputedStyle(openButton).opacity;
+            const noGlow = '0 0 0 0 rgba(0, 0, 0, 0)';
+
+            pulseAnimation = openButton.animate(reduceMotion()
+                ? [{ opacity: rest }, { opacity: 1, offset: 0.3 }, { opacity: rest }]
+                : [
+                    { transform: 'scale(1)', opacity: rest, boxShadow: noGlow, easing: 'ease-out' },
+                    { transform: 'scale(1.18)', opacity: 1, boxShadow: `0 0 16px 4px ${glow}`, offset: 0.2, easing: 'ease-in-out' },
+                    { transform: 'scale(1)', opacity: 1, boxShadow: `0 0 10px 2px ${glow}`, offset: 0.5, easing: 'ease-in' },
+                    { transform: 'scale(1)', opacity: rest, boxShadow: noGlow }
+                ], { duration: 1400 });
+            playMapSound('twinkle', 0, { volume: 0.6 });
         }
     };
 }

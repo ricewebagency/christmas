@@ -1,4 +1,4 @@
-import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js';
+import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=0d22dc9828';
 
 const BASILISK_FRAME_SOURCES = [
     './assets/images/chamber/basilisk-stale-1.png',
@@ -94,7 +94,7 @@ const BASILISK_PRELOADS = [
 
 async function loadBasiliskDialogue() {
     try {
-        const response = await fetch('./assets/files/chamber-dialogues.json');
+        const response = await fetch('./assets/files/chamber-dialogues.json', { cache: 'no-cache' });
 
         if (!response.ok) {
             throw new Error(`Failed to load chamber dialogues: ${response.status}`);

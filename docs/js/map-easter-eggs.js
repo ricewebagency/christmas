@@ -2,16 +2,19 @@
 // - Compass: tap the printed compass rose and it spins.
 // - Footsteps: tap next to a walker and its name inks in above it.
 // - Castle: tap the castle and its windows and a string of Christmas lights come on.
-// - Shake the phone: snow. Lay it flat: Nox (the light goes out); pick it up: Lumos.
+// - Shake the phone (or tap the map quickly a few times): snow. Until it's found, every tap lets one flake fall.
+// - Lay the phone flat (or swipe across the map): Nox (the light goes out); pick it up (or swipe again): Lumos.
 // - Revelio: casting the spell (map-reveal.js). Mischief managed: closing the map (map.js).
 // Every first find earns the guest's house points (map-rewards.js).
 // Motion eggs never ask for sensor permission: they work where the browser already sends motion
-// events (Android), and stay silent where it needs a prompt first (iOS).
+// events (Android). Where it needs a prompt first (iOS) or blocks the sensors (e.g. Samsung Internet's
+// secret mode, desktops), the tap and swipe gestures do the same.
 // Each egg reports itself through `onFound(eggId, { point, delayMs })` (map-rewards.js turns that into house points).
 // Egg ids must match EasterEggs.All in the API.
-import { fetchGuestNames } from './api-client.js';
-import { centerOf } from './map-rewards.js';
-import { createMapSoundVoice, playMapSound } from './map-sounds.js';
+import { fetchGuestNames } from './api-client.js?v=0d22dc9828';
+import { speakSpell } from './map-dumbledore.js?v=0d22dc9828';
+import { centerOf } from './map-rewards.js?v=0d22dc9828';
+import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=0d22dc9828';
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const random = (min, max) => min + Math.random() * (max - min);
@@ -25,6 +28,29 @@ function fadeOutFromCurrent(el, { duration = 900, delay = 0 } = {}) {
     el.getAnimations().forEach((animation) => animation.cancel());
     return el.animate([{ opacity: from }, { opacity: 0 }], { duration, delay, easing: 'ease-in', fill: 'both' });
 }
+
+// Calls onRelease(down, event) when the primary pointer lifts off el; `down` is where and when it went down.
+// Plain pointer events instead of click: taps on non-interactive elements don't always click on iOS.
+function onPointerRelease(el, onRelease) {
+    let down = null;
+    el.addEventListener('pointerdown', (event) => {
+        down = event.isPrimary ? { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp } : null;
+    }, { passive: true });
+    el.addEventListener('pointercancel', () => {
+        down = null;
+    }, { passive: true });
+    el.addEventListener('pointerup', (event) => {
+        const start = down;
+        down = null;
+
+        if (start && start.id === event.pointerId) {
+            onRelease(start, event);
+        }
+    }, { passive: true });
+}
+
+const isTapGesture = (down, event) => Math.hypot(event.clientX - down.x, event.clientY - down.y) <= TAP_SLOP_PX
+    && event.timeStamp - down.time <= TAP_MAX_MS;
 
 // ---------------------------------------------------------------------------------------------
 // Compass
@@ -228,26 +254,12 @@ function initFootstepNames(mapEl, footsteps, guestName, onFound) {
         return name;
     };
 
-    // Plain pointer events instead of click: taps on non-interactive elements don't always click on iOS.
-    let down = null;
-    sheetEl.addEventListener('pointerdown', (event) => {
-        down = { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp };
-    }, { passive: true });
-    sheetEl.addEventListener('pointercancel', () => {
-        down = null;
-    }, { passive: true });
-    sheetEl.addEventListener('pointerup', (event) => {
-        const start = down;
-        down = null;
-
-        if (!start || start.id !== event.pointerId || !isMapOpen(mapEl)) {
+    onPointerRelease(sheetEl, (down, event) => {
+        if (!isMapOpen(mapEl)) {
             return;
         }
 
-        const isTap = Math.hypot(event.clientX - start.x, event.clientY - start.y) <= TAP_SLOP_PX
-            && event.timeStamp - start.time <= TAP_MAX_MS;
-
-        if (isTap && !(event.target instanceof Element && event.target.closest('a, button, [data-egg-compass], [data-egg-castle]'))) {
+        if (isTapGesture(down, event) && !(event.target instanceof Element && event.target.closest('a, button, [data-egg-compass], [data-egg-castle]'))) {
             // A walker keeps the name (and banner) it got the first time it was tapped.
             const labelled = footsteps.labelNearest(event.clientX, event.clientY, (usedNames, known) => (known
                 ? createNameTag(known.name, known.tagIndex)
@@ -257,7 +269,7 @@ function initFootstepNames(mapEl, footsteps, guestName, onFound) {
                 onFound('footsteps', { point: { x: event.clientX, y: event.clientY - 40 }, delayMs: 900 });
             }
         }
-    }, { passive: true });
+    });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -334,7 +346,6 @@ function initCastle(mapEl, onFound) {
         return;
     }
 
-    let lights = null;
     // Created up front so the file is loaded before the first tap (a cold start made it late).
     const wind = createMapSoundVoice('woosh');
     let isLit = false;
@@ -346,8 +357,8 @@ function initCastle(mapEl, onFound) {
 
         isLit = true;
         onFound('castle', { point: centerOf(buttonEl), delayMs: reduceMotion() ? 600 : 2600 });
-        lights ??= createCastleLights(layerEl);
-        const { windows, bulbs } = lights;
+        // Fresh lights every time; the previous ones are removed once they have gone out.
+        const { windows, bulbs } = createCastleLights(layerEl);
         const calm = reduceMotion();
         playMapSound('twinkle', 0, { rate: 0.9 });
 
@@ -384,8 +395,10 @@ function initCastle(mapEl, onFound) {
 
         window.setTimeout(() => {
             const fades = [...bulbs, ...windows].map((el) => fadeOutFromCurrent(el, { duration: CASTLE_FADE_MS, delay: random(0, 500) }));
+            // Removing the lights (instead of cancelling their animations) guarantees nothing can bring them back,
+            // e.g. a twinkle or fill-forwards animation that getAnimations() didn't return.
             Promise.allSettled(fades.map((fade) => fade.finished)).then(() => {
-                [...bulbs, ...windows].forEach((el) => el.getAnimations().forEach((animation) => animation.cancel()));
+                [...bulbs, ...windows].forEach((el) => el.remove());
                 isLit = false;
             });
         }, allOnMs + CASTLE_HOLD_MS);
@@ -401,8 +414,8 @@ const SHAKE_PEAKS = 3;
 const SHAKE_WINDOW_MS = 1000;
 const SHAKE_PEAK_GAP_MS = 120;
 const SNOW_SPAWN_MS = 6500;
-
-function letItSnow(onDone) {
+// Returns { spawn } to add flakes while it's still running (after onDone it's gone).
+function letItSnow(onDone, { spawnMs = SNOW_SPAWN_MS, flakesPerSecond: rate = null, flakes: initialFlakes = 0 } = {}) {
     const calm = reduceMotion();
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
@@ -419,7 +432,7 @@ function letItSnow(onDone) {
     resize();
     window.addEventListener('resize', resize);
 
-    const flakesPerSecond = calm ? 10 : 34;
+    const flakesPerSecond = rate ?? (calm ? 10 : 34);
     const flakes = [];
     const startTime = performance.now();
     let lastTime = startTime;
@@ -439,12 +452,16 @@ function letItSnow(onDone) {
         });
     };
 
+    for (let i = 0; i < initialFlakes; i += 1) {
+        spawn();
+    }
+
     const frame = (now) => {
         const dt = Math.min(0.05, (now - lastTime) / 1000);
         const elapsed = (now - startTime) / 1000;
         lastTime = now;
 
-        if (now - startTime < SNOW_SPAWN_MS) {
+        if (now - startTime < spawnMs) {
             spawnDebt += dt * flakesPerSecond;
             for (; spawnDebt >= 1; spawnDebt -= 1) {
                 spawn();
@@ -471,7 +488,7 @@ function letItSnow(onDone) {
             ctx.fill();
         }
 
-        if (flakes.length || now - startTime < SNOW_SPAWN_MS) {
+        if (flakes.length || now - startTime < spawnMs) {
             requestAnimationFrame(frame);
             return;
         }
@@ -482,15 +499,69 @@ function letItSnow(onDone) {
     };
 
     requestAnimationFrame(frame);
+    return { spawn };
 }
 
-function initShakeSnow(onFound) {
+const SNOW_TAPS = 8;
+const SNOW_TAP_GAP_MS = 400;
+
+function initSnow(mapEl, onFound, isFound) {
+    let isSnowing = false;
+    // Also covers guests who can't earn points (their finds are never recorded).
+    let hasSnowed = false;
+
+    const snow = () => {
+        isSnowing = true;
+        hasSnowed = true;
+        onFound('snow', { delayMs: 1500 });
+        playMapSound('twinkle', 0, { rate: 0.8, volume: 0.6 });
+        letItSnow(() => {
+            isSnowing = false;
+        });
+    };
+
+    // Tapping quickly: for browsers without motion events. Eggs and buttons break the streak.
+    const sheetEl = mapEl.querySelector('[data-map-sheet]');
+    let taps = [];
+    // Teaser until the egg is found: every tap lets one flake fall. Taps share one canvas while flakes are falling.
+    let teaser = null;
+    const teaseFlake = () => {
+        if (teaser) {
+            teaser.spawn();
+            return;
+        }
+
+        teaser = letItSnow(() => {
+            teaser = null;
+        }, { spawnMs: 0, flakes: 1 });
+    };
+
+    if (sheetEl) {
+        onPointerRelease(sheetEl, (down, event) => {
+            const onControl = event.target instanceof Element && event.target.closest('a, button, [data-egg-compass], [data-egg-castle]');
+
+            if (isSnowing || !isMapOpen(mapEl) || !isTapGesture(down, event) || onControl) {
+                taps = [];
+                return;
+            }
+
+            const now = event.timeStamp;
+            taps = taps.length && now - taps[taps.length - 1] > SNOW_TAP_GAP_MS ? [now] : [...taps, now];
+
+            if (taps.length >= SNOW_TAPS) {
+                taps = [];
+                snow();
+            } else if (!hasSnowed && !isFound('snow')) {
+                teaseFlake();
+            }
+        });
+    }
+
     if (typeof window.DeviceMotionEvent === 'undefined') {
         return;
     }
 
     let peaks = [];
-    let isSnowing = false;
 
     window.addEventListener('devicemotion', (event) => {
         if (isSnowing || document.hidden) {
@@ -518,12 +589,7 @@ function initShakeSnow(onFound) {
 
         if (peaks.length >= SHAKE_PEAKS) {
             peaks = [];
-            isSnowing = true;
-            onFound('snow', { delayMs: 1500 });
-            playMapSound('twinkle', 0, { rate: 0.8, volume: 0.6 });
-            letItSnow(() => {
-                isSnowing = false;
-            });
+            snow();
         }
     });
 }
@@ -536,6 +602,10 @@ const FLAT_DEG = 10;
 const LIFT_DEG = 22;
 const FLAT_HOLD_MS = 1200;
 const LIFT_HOLD_MS = 250;
+// A swipe goes any direction (the sheet takes no pan, so no pull-to-refresh) and crosses at least
+// this share of the visible map width. Vertical drags in the scrollable text scroll it instead.
+const SWIPE_MIN_SHARE = 0.4;
+const SWIPE_MAX_MS = 800;
 const DARK_ALPHA = 0.92;
 const IRIS_FEATHER_PX = 170;
 const SMOKE_PATHS = [
@@ -544,6 +614,7 @@ const SMOKE_PATHS = [
 ];
 
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+const easeOut = (t) => 1 - (1 - t) ** 2;
 
 function createNoxOverlay() {
     const rootEl = document.createElement('div');
@@ -562,6 +633,9 @@ function createNoxOverlay() {
         </div>
         <div class="absolute inset-x-0 top-[56%] flex justify-center">
             <p data-nox-word class="font-inkpot text-4xl text-amber-100 opacity-0 [text-shadow:0_0_18px_rgba(255,196,92,0.8)]"></p>
+        </div>
+        <div class="absolute inset-x-0 bottom-[max(3rem,env(safe-area-inset-bottom))] flex justify-center px-6">
+            <p data-nox-hint lang="en" class="max-w-xs text-center font-inkpot text-xl text-amber-100/80 opacity-0 [text-shadow:0_0_12px_rgba(255,196,92,0.6)]"></p>
         </div>`;
     document.body.append(rootEl);
 
@@ -571,15 +645,12 @@ function createNoxOverlay() {
         emberEl: rootEl.querySelector('[data-nox-ember]'),
         smokeEl: rootEl.querySelector('[data-nox-smoke]'),
         smokePathEls: [...rootEl.querySelectorAll('[data-nox-smoke] path')],
-        wordEl: rootEl.querySelector('[data-nox-word]')
+        wordEl: rootEl.querySelector('[data-nox-word]'),
+        hintEl: rootEl.querySelector('[data-nox-hint]')
     };
 }
 
 function initNoxLumos(mapEl, onFound) {
-    if (typeof window.DeviceOrientationEvent === 'undefined') {
-        return;
-    }
-
     let overlay = null;
     let state = 'lit'; // lit | dousing | dark | lighting
     let irisRadius = 0;
@@ -587,6 +658,10 @@ function initNoxLumos(mapEl, onFound) {
     let effects = [];
     let flatTimer = null;
     let liftTimer = null;
+    // Swiped dark: only a swipe (or closing the map) lights it again, not holding the phone up.
+    let swipedDark = false;
+    // Swiped light while the phone lay flat: it has to be picked up before laying it flat counts again.
+    let needsLift = false;
 
     const fullRadius = () => Math.hypot(window.innerWidth, window.innerHeight) / 2 + IRIS_FEATHER_PX;
 
@@ -597,7 +672,7 @@ function initNoxLumos(mapEl, onFound) {
     };
 
     // Moves the iris through [progress, radius] stops; resolves false when interrupted.
-    const tweenIris = (duration, stops) => {
+    const tweenIris = (duration, stops, ease = easeInOut) => {
         const token = ++irisToken;
         const startTime = performance.now();
 
@@ -613,7 +688,7 @@ function initNoxLumos(mapEl, onFound) {
                 const [fromAt, fromRadius] = stops[Math.max(0, next - 1)];
                 const [toAt, toRadius] = stops[next];
                 const local = toAt === fromAt ? 1 : (t - fromAt) / (toAt - fromAt);
-                setIris(fromRadius + (toRadius - fromRadius) * easeInOut(local));
+                setIris(fromRadius + (toRadius - fromRadius) * ease(local));
 
                 if (t < 1) {
                     requestAnimationFrame(frame);
@@ -646,27 +721,37 @@ function initNoxLumos(mapEl, onFound) {
         ], { duration: 1900, delay, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
     };
 
+    // In the dark, tell the guest how to get the light back: the same gesture that put it out.
+    const showHint = () => {
+        overlay.hintEl.textContent = swipedDark ? 'Swipe again to cast Lumos' : 'Pick up your phone or swipe to cast Lumos';
+        const fadeIn = { opacity: 0.85, offset: 0.25 };
+        play(overlay.hintEl, reduceMotion()
+            ? [{ opacity: 0 }, fadeIn, { opacity: 0.85 }]
+            : [{ opacity: 0 }, fadeIn, { opacity: 0.45, offset: 0.6 }, { opacity: 0.85 }],
+        { duration: 2400, delay: reduceMotion() ? 0 : 2400, easing: 'ease-in-out' });
+    };
+
     const nox = async () => {
         overlay ??= createNoxOverlay();
         state = 'dousing';
         clearEffects();
         overlay.rootEl.classList.remove('hidden');
+        void speakSpell('nox');
         const full = fullRadius();
-        setIris(full);
+        // Start where the darkness just touches the corners, so it is visible from the first frame.
+        const start = full - IRIS_FEATHER_PX;
+        setIris(start);
 
         if (reduceMotion()) {
-            await tweenIris(700, [[0, full], [1, 0]]);
+            await tweenIris(700, [[0, start], [1, 0]], easeOut);
         } else {
-            // The flame sputters, catches itself, then the light shrinks to a single ember.
-            const sputter = tweenIris(900, [[0, full], [0.15, full * 0.55], [0.3, full * 0.9], [0.5, full * 0.4], [0.65, full * 0.75], [1, full * 0.6]]);
+            // The light shrinks smoothly to a single ember.
+            const shrink = tweenIris(2400, [[0, start], [1, 0]], easeOut);
             play(overlay.emberEl, [
                 { opacity: 0, transform: 'scale(0.6)' },
-                { opacity: 0.95, transform: 'scale(1)', offset: 0.15 },
-                { opacity: 0.5, transform: 'scale(0.8)', offset: 0.3 },
-                { opacity: 0.85, transform: 'scale(0.9)', offset: 0.45 },
-                { opacity: 0.35, transform: 'scale(0.6)', offset: 0.7 },
+                { opacity: 0.9, transform: 'scale(1)', offset: 0.3 },
                 { opacity: 0, transform: 'scale(0.2)' }
-            ], { duration: 1300, delay: 1600, easing: 'ease-in' });
+            ], { duration: 1300, delay: 1600, easing: 'ease-in-out' });
             overlay.smokePathEls.forEach((pathEl, i) => {
                 const length = pathEl.getTotalLength();
                 pathEl.style.strokeDasharray = `${length}px`;
@@ -679,15 +764,14 @@ function initNoxLumos(mapEl, onFound) {
             ], { duration: 3000, delay: 2300, easing: 'ease-out' });
             showWord('Nox', 2700);
 
-            if (!(await sputter)) {
+            if (!(await shrink)) {
                 return;
             }
-
-            await tweenIris(1500, [[0, full * 0.6], [0.35, full * 0.35], [0.45, full * 0.42], [0.8, full * 0.06], [1, 0]]);
         }
 
         if (state === 'dousing') {
             state = 'dark';
+            showHint();
         }
     };
 
@@ -697,10 +781,15 @@ function initNoxLumos(mapEl, onFound) {
         }
 
         state = 'lighting';
+        swipedDark = false;
+        // Read the hint's opacity before clearEffects drops it, so it fades instead of blinking out.
+        const hintFade = fadeOutFromCurrent(overlay.hintEl, { duration: 400 });
         clearEffects();
+        effects.push(hintFade);
         const from = irisRadius;
         const full = fullRadius();
         playMapSound('twinkle', 0, { rate: 1.05 });
+        const voiceDone = speakSpell('lumos');
 
         let done;
         if (reduceMotion()) {
@@ -718,8 +807,13 @@ function initNoxLumos(mapEl, onFound) {
 
         if (done && state === 'lighting') {
             state = 'lit';
-            // Rewarded once the light is back, otherwise nobody sees it.
-            onFound('nox', { delayMs: 0 });
+            // Rewarded once the light is back (otherwise nobody sees it) and Dumbledore has finished
+            // the incantation, so his reward line doesn't talk over it. Dark again by then: the next Lumos rewards.
+            void voiceDone.then(() => {
+                if (state === 'lit') {
+                    onFound('nox', { delayMs: 0 });
+                }
+            });
             window.setTimeout(() => {
                 if (state === 'lit') {
                     clearEffects();
@@ -736,12 +830,42 @@ function initNoxLumos(mapEl, onFound) {
         liftTimer = null;
     };
 
+    const sheetEl = mapEl.querySelector('[data-map-sheet]');
+
+    if (sheetEl) {
+        onPointerRelease(sheetEl, (down, event) => {
+            const distance = Math.hypot(event.clientX - down.x, event.clientY - down.y);
+            const minDistance = Math.min(window.innerWidth, sheetEl.getBoundingClientRect().width) * SWIPE_MIN_SHARE;
+            // Dragging with the mouse to select text is not a swipe.
+            const isSelecting = Boolean(window.getSelection()?.toString());
+
+            if (distance < minDistance || event.timeStamp - down.time > SWIPE_MAX_MS || isSelecting || !isMapOpen(mapEl)) {
+                return;
+            }
+
+            clearTimers();
+
+            if (state === 'lit') {
+                swipedDark = true;
+                void nox();
+            } else if (state === 'dousing' || state === 'dark') {
+                needsLift = true;
+                void lumos();
+            }
+        });
+    }
+
     window.addEventListener('deviceorientation', (event) => {
         if (event.beta === null || event.gamma === null) {
             return;
         }
 
         const tilt = Math.max(Math.abs(event.beta), Math.abs(event.gamma));
+
+        if (needsLift) {
+            needsLift = tilt <= LIFT_DEG;
+            return;
+        }
 
         if (state === 'lit') {
             if (tilt < FLAT_DEG && isMapOpen(mapEl) && !document.hidden) {
@@ -757,7 +881,7 @@ function initNoxLumos(mapEl, onFound) {
             return;
         }
 
-        if (state === 'dousing' || state === 'dark') {
+        if ((state === 'dousing' || state === 'dark') && !swipedDark) {
             if (tilt > LIFT_DEG) {
                 liftTimer ??= window.setTimeout(() => {
                     liftTimer = null;
@@ -806,11 +930,11 @@ function initSpells(mapEl, onFound) {
     }, true);
 }
 
-export function initMapEasterEggs(mapEl, { footsteps, guestName, onFound = () => {} } = {}) {
+export function initMapEasterEggs(mapEl, { footsteps, guestName, onFound = () => {}, isFound = () => false } = {}) {
     initCompass(mapEl, onFound);
     initFootstepNames(mapEl, footsteps, guestName, onFound);
     initCastle(mapEl, onFound);
-    initShakeSnow(onFound);
+    initSnow(mapEl, onFound, isFound);
     initNoxLumos(mapEl, onFound);
     initSpells(mapEl, onFound);
 }

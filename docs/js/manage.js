@@ -1,6 +1,6 @@
-import { API_BASE_URL, getStoredGuestCode } from './api-client.js';
-import { redirectToPage } from './guest-flow.js';
-import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js';
+import { API_BASE_URL, getStoredGuestCode } from './api-client.js?v=0d22dc9828';
+import { redirectToPage } from './guest-flow.js?v=0d22dc9828';
+import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=0d22dc9828';
 
 const SETTINGS_STORAGE_KEY = 'christmas-at-the-great-hall.manage-settings';
 const DISHES_VIEW_STORAGE_KEY = 'christmas-at-the-great-hall.manage-dishes-view';
@@ -16,7 +16,7 @@ const RSVP_BADGES = {
 const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const HOUSE_LABELS = { gryffindor: 'Gryffindor', hufflepuff: 'Hufflepuff', ravenclaw: 'Ravenclaw', slytherin: 'Slytherin' };
 // Easter eggs op de Marauder's Map (zelfde volgorde als de API); elke eerste vondst = 10 huispunten.
-const EGG_LABELS = { compass: 'Kompas', footsteps: 'Voetstappen', castle: 'Kasteel', snow: 'Sneeuw (schudden)', nox: 'Nox/Lumos (plat leggen)', revelio: 'Revelio', mischief: 'Mischief managed' };
+const EGG_LABELS = { compass: 'Kompas', footsteps: 'Voetstappen', castle: 'Kasteel', snow: 'Sneeuw (schudden/snel tikken)', nox: 'Nox/Lumos (plat leggen/vegen)', revelio: 'Revelio', mischief: 'Mischief managed' };
 const BADGE_BASE = 'inline-flex items-center rounded-full px-1.5 py-px text-[11px] ring-1 ring-inset';
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
@@ -488,9 +488,9 @@ function ratio(key, part, whole) {
     return `${num(`${key}-part`, part)}/${num(`${key}-whole`, whole)}`;
 }
 
-function statGroup(title, tiles) {
+function statGroup(title, tiles, layout = 'flex divide-x') {
     return `
-        <div data-group class="flex flex-auto divide-x divide-neutral-800 overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 transition duration-300 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/10" role="group" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
+        <div data-group class="${layout} flex-auto divide-neutral-800 overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 transition duration-300 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/10" role="group" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
             ${tiles.join('')}
         </div>`;
 }
@@ -542,14 +542,14 @@ function renderHouses() {
         const isLeader = top > 0 && points[house] === top;
         const members = state.guests.filter((guest) => guest.house === house).length;
         return `
-            <div data-tile class="flex flex-1 items-center justify-center gap-2 px-3 py-1.5 transition-colors duration-300 hover:bg-neutral-800/50" title="${escapeHtml(HOUSE_LABELS[house])}: ${points[house]} punten, ${members} leden${isLeader ? ' (aan kop)' : ''}">
+            <div data-tile class="flex flex-1 items-center justify-center gap-2 bg-neutral-900 px-3 py-1.5 transition-colors duration-300 hover:bg-neutral-800/50" title="${escapeHtml(HOUSE_LABELS[house])}: ${points[house]} punten, ${members} leden${isLeader ? ' (aan kop)' : ''}">
                 ${houseLogo(house, 'h-6 w-6')}
                 <div class="leading-tight">
                     <p class="whitespace-nowrap text-base font-semibold tabular-nums ${isLeader ? 'text-accent' : 'text-neutral-100'}">${num(`points-${house}`, points[house])} <span class="text-xs font-normal text-neutral-500">pt</span></p>
                     <p class="whitespace-nowrap text-xs tabular-nums text-neutral-400">${num(`house-${house}`, members)} leden</p>
                 </div>
             </div>`;
-    }));
+    }), 'grid grid-cols-2 gap-px !bg-neutral-800 sm:flex sm:gap-0 sm:divide-x sm:!bg-neutral-900');
 }
 
 function getFilteredGuests() {
@@ -595,7 +595,6 @@ const ICONS = {
     chevron: '<path d="m9 18 6-6-6-6" />',
     dish: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />',
     link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />',
-    open: '<path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />',
     reset: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" />',
     delete: '<path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
     check: '<path d="M20 6 9 17l-5-5" />',
@@ -649,7 +648,7 @@ function renderGuestRow(guest) {
                     <span class="w-14">
                         <button type="button" data-action="toggle-admin" data-code="${code}" aria-pressed="${guest.isAdmin}"
                             title="${guest.isAdmin ? 'Admin – klik om in te trekken' : 'Geen admin – klik om admin te maken'}"
-                            class="${BADGE_BASE} transition active:scale-90 ${guest.isAdmin ? 'text-accent ring-accent/40 hover:ring-red-500/40 hover:text-red-400' : 'text-neutral-600 ring-neutral-700 hover:text-accent hover:ring-accent/40'}">${guest.isAdmin ? 'Admin' : '+ Admin'}</button>
+                            class="${BADGE_BASE} whitespace-nowrap transition active:scale-90 ${guest.isAdmin ? 'text-accent ring-accent/40 hover:ring-red-500/40 hover:text-red-400' : 'text-neutral-600 ring-neutral-700 hover:text-accent hover:ring-accent/40'}">${guest.isAdmin ? 'Admin' : '+ Admin'}</button>
                     </span>
                     <span class="inline-flex w-9 items-center gap-1 text-xs ${dishCount ? 'text-neutral-300' : 'text-neutral-600'}" title="${escapeHtml(dishTitle)}">${icon('dish', 'h-3.5 w-3.5')}${dishCount}</span>
                     ${eggCounter}
@@ -657,8 +656,6 @@ function renderGuestRow(guest) {
                 <div class="flex shrink-0 items-center">
                     <button type="button" data-action="copy-link" data-code="${code}" title="Link kopiëren" aria-label="Link van ${name} kopiëren"
                         class="${ICON_BUTTON} hover:text-accent">${icon('link')}</button>
-                    <a href="${escapeHtml(guest.inviteUrl)}" target="_blank" rel="noopener" title="Uitnodiging openen" aria-label="Uitnodiging van ${name} openen"
-                        class="${ICON_BUTTON} hover:text-accent">${icon('open')}</a>
                     <button type="button" data-action="reset" data-code="${code}" title="Resetten" aria-label="${name} resetten"
                         class="${ICON_BUTTON} hover:text-amber-400">${icon('reset')}</button>
                     <button type="button" data-action="delete" data-code="${code}" title="Verwijderen" aria-label="${name} verwijderen"

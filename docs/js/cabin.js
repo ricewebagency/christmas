@@ -1,5 +1,6 @@
-import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js';
-import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js';
+import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js?v=0d22dc9828';
+import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=0d22dc9828';
+import { parseRevealDelayMs } from './page-transitions.js?v=0d22dc9828';
 
 const DEFAULT_CABIN_IMAGE = './assets/images/hogwarts-express-cabin-front-gryffindor.png';
 const BACKDROP_SELECTOR = '[data-cabin-backdrop]';
@@ -25,6 +26,7 @@ const DISH_CHOICE_SELECTOR = '[data-dish-choice]';
 const DISH_CONFIRM_SELECTOR = '[data-dish-confirm]';
 const DISH_BACK_SELECTOR = '[data-dish-back]';
 const DISH_PANEL_FADE_MS = 1200;
+const BACK_REVEAL_DELAY_OFFSET_MS = 800;
 const DISH_SELECTED_SUMMARY_SELECTOR = '[data-selected-dish-summary]';
 const DISH_SELECTED_SUMMARY_LABEL_SELECTOR = '[data-selected-dish-label]';
 const DISH_SELECTED_SUMMARY_VALUE_SELECTOR = '[data-selected-dish-value]';
@@ -801,10 +803,29 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         dishPanel.classList.remove('pointer-events-none');
     };
 
+    // Unhiding the intro panel restarts its reveal animations; on "Go back" they should start sooner.
+    let introDelaysShortened = false;
+    const shortenIntroRevealDelays = () => {
+        if (introDelaysShortened) {
+            return;
+        }
+        introDelaysShortened = true;
+
+        introPanel.querySelectorAll('[data-reveal]').forEach((element) => {
+            const delayMs = parseRevealDelayMs(element);
+            element.style.setProperty('--reveal-delay', `${Math.max(0, delayMs - BACK_REVEAL_DELAY_OFFSET_MS)}ms`);
+        });
+
+        const buttonDelayMs = Number.parseFloat(introButton.style.animationDelay) || 0;
+        introButton.style.animationDelay = `${Math.max(0, buttonDelayMs - BACK_REVEAL_DELAY_OFFSET_MS)}ms`;
+    };
+
     const revealIntroPanel = () => {
         if (!dishPanel.classList.contains('opacity-100')) {
             return;
         }
+
+        shortenIntroRevealDelays();
 
         dishPanel.classList.remove('opacity-100', 'pointer-events-auto');
         dishPanel.classList.add('pointer-events-none', 'translate-y-1');

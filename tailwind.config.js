@@ -88,13 +88,6 @@ module.exports = {
           "0%, 100%": { opacity: "0.15", transform: "scale(0.6) rotate(0deg)" },
           "50%": { opacity: "0.9", transform: "scale(1) rotate(20deg)" },
         },
-        // Revelio: the spell word flares up in golden ink and dissolves.
-        revelioCast: {
-          "0%": { opacity: "0", transform: "scale(0.6)", filter: "blur(6px)", letterSpacing: "0.45em" },
-          "25%": { opacity: "1", transform: "scale(1)", filter: "blur(0px)", letterSpacing: "0.08em" },
-          "60%": { opacity: "1", transform: "scale(1.04)", filter: "blur(0px)", letterSpacing: "0.1em" },
-          "100%": { opacity: "0", transform: "scale(1.2)", filter: "blur(8px)", letterSpacing: "0.22em" },
-        },
         // Sparks fly from the wand tip; direction comes from --spark-x / --spark-y (map-reveal.js).
         revelioSpark: {
           "0%": { opacity: "0", transform: "translate(-50%, -50%) scale(0.4)" },
@@ -277,7 +270,6 @@ module.exports = {
         candleFlicker: "candleFlicker 4.8s ease-in-out infinite",
         mapPeek: "mapPeek 3.6s ease-in-out infinite",
         mapTwinkle: "mapTwinkle 2.4s ease-in-out infinite",
-        revelioCast: "revelioCast 1.9s cubic-bezier(0.2, 0.7, 0.2, 1) both",
         revelioSpark: "revelioSpark 1.1s cubic-bezier(0.15, 0.7, 0.3, 1) both",
         revelioWand: "revelioWand 0.6s ease-in-out",
         inkReveal: "inkReveal 1.8s cubic-bezier(0.4, 0, 0.2, 1) both",

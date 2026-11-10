@@ -2,12 +2,13 @@
 // Which line plays:
 // - Revelio: always its own line;
 // - the first egg a guest finds: 'first-find'; the last one: 'all-found';
-// - in between: either the line about that egg, or a general one the guest hasn't heard yet.
+// - the second: 'Ten points to <house>!', right after he told them points are to be earned;
+// - in between: either the line about that egg, or a general one the guest hasn't heard yet
+//   ('Ten points to <house>!' takes turns with the general ones).
 // After the first find, a follow-up tells the guest how many secrets there are.
 // Plain <audio>, so the global mute toggle silences him too; the subtitles show either way.
-// The recordings stop abruptly, so every line fades out over its last FADE_OUT_S seconds. iOS ignores
-// <audio>.volume, so the voice runs through a Web Audio gain node when the audio context is running
-// (unlocked on the first tap); otherwise it falls back to fading the element's volume.
+// iOS ignores <audio>.volume, so the voice runs through a Web Audio gain node when the audio context is
+// running (unlocked on the first tap); otherwise it falls back to the element's volume.
 import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js';
 
 const AUDIO_DIR = new URL('../assets/music/dumbledore/', import.meta.url);
@@ -15,14 +16,36 @@ const SUBTITLES_URL = new URL('../assets/files/dumbledore-subtitles.json', impor
 const EGG_LINES = { compass: 'compass', footsteps: 'footsteps', castle: 'castle', snow: 'snow', nox: 'nox', revelio: 'revelio' };
 // 'mischief' has no line of its own; it gets a general one.
 const GENERAL_LINES = ['well-spotted', 'remarkable', 'quite-forgotten', 'look-closely'];
+// Stands for the guest's own 'ten-points-to-<house>' line in the rotation (and in localStorage).
+const TEN_POINTS = 'ten-points';
+const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
+const tenPointsLine = (house) => `ten-points-to-${house}`;
 const FIRST_FIND_FOLLOW_UP = 'more-secrets';
+// Incantations for Nox / Lumos (speakSpell), named after what he says.
+const SPELL_LINES = {
+    lumos: [
+        'Lumos! Light for the tree, light for the hall, light for us all',
+        'Lumos! Now... where did I leave my lemon drops',
+        'A little light for the season of giving. Lumos!'
+    ],
+    nox: [
+        'Nox (2)',
+        'Nox. Do mind your step, for there is no light',
+        'Nox. I do hope nobody trips over the Christmas tree'
+    ]
+};
+const SPELL_MAX_MS = 10000;
 const FOLLOW_UP_PAUSE_MS = 500;
+// Subtitles stay up long enough to read: each sentence at least MIN_READ_MS + READ_MS_PER_CHAR per
+// character (a short, quickly spoken line may then trail the voice slightly), and the last one lingers.
+const MIN_READ_MS = 1000;
+const READ_MS_PER_CHAR = 45;
+const LINGER_MS = 2000;
 const HEARD_STORAGE_KEY = 'christmas-at-the-great-hall.dumbledore-heard';
 const VOICE_VOLUME = 0.9;
 // The background music steps back while he speaks.
 const DUCKED_MUSIC_VOLUME = 0.07;
 const DUCK_MS = 400;
-const FADE_OUT_S = 0.7;
 
 let subtitlesPromise = null;
 let subtitleEl = null;
@@ -30,6 +53,8 @@ let speechToken = 0;
 let audioContext = null;
 // Also kept in memory, so the no-repeat rule holds when localStorage is unavailable.
 let lastGeneralLine = null;
+const lastSpellLines = {};
+let spellVoice = null;
 
 function getAudioContext() {
     const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
@@ -88,26 +113,6 @@ function createVoiceVolume(audio) {
     };
 }
 
-// Fades the voice out over the last FADE_OUT_S seconds of the file, so it never ends on a cut.
-function fadeOutAtEnd(audio, setLevel) {
-    const step = () => {
-        if (audio.ended || audio.error) {
-            setLevel(0);
-            return;
-        }
-
-        if (Number.isFinite(audio.duration) && audio.duration > 0) {
-            const remaining = Math.max(0, audio.duration - audio.currentTime);
-            const progress = Math.min(1, remaining / Math.min(FADE_OUT_S, audio.duration / 2));
-            // Squared, so the fade sounds even rather than dropping off at the very end.
-            setLevel(progress * progress);
-        }
-
-        requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-}
-
 function loadSubtitles() {
     subtitlesPromise ??= fetch(SUBTITLES_URL, { cache: 'no-store' })
         .then((response) => (response.ok ? response.json() : []))
@@ -128,7 +133,7 @@ function getSubtitleEl() {
         subtitleEl = document.createElement('p');
         subtitleEl.setAttribute('aria-live', 'polite');
         subtitleEl.setAttribute('aria-atomic', 'true');
-        subtitleEl.className = 'pointer-events-none fixed inset-x-4 bottom-28 z-[80] mx-auto max-w-xl text-center font-inkpot text-base leading-relaxed text-white opacity-0 transition-opacity duration-300 ease-out [-webkit-text-stroke:5px_#000] [paint-order:stroke_fill] [text-shadow:-2px_-2px_0_#000,0_-2px_0_#000,2px_-2px_0_#000,2px_0_0_#000,2px_2px_0_#000,0_2px_0_#000,-2px_2px_0_#000,-2px_0_0_#000,0_0_10px_#000] sm:bottom-32 sm:text-lg';
+        subtitleEl.className = 'pointer-events-none fixed inset-x-4 bottom-28 z-[80] mx-auto max-w-xl text-center font-inkpot text-[17px] leading-relaxed text-white opacity-0 transition-opacity duration-300 ease-out [-webkit-text-stroke:2px_#000] [paint-order:stroke_fill] [text-shadow:-1px_-1px_0_#000,0_-1px_0_#000,1px_-1px_0_#000,1px_0_0_#000,1px_1px_0_#000,0_1px_0_#000,-1px_1px_0_#000,-1px_0_0_#000,0_0_6px_#000] sm:bottom-32 sm:text-[19px]';
         document.body.append(subtitleEl);
     }
 
@@ -139,20 +144,25 @@ const wait = (ms) => new Promise((resolve) => {
     window.setTimeout(resolve, ms);
 });
 
-async function showSubtitles(sentences, token) {
+const displayMs = (sentence) => Math.max(sentence.durationMs, MIN_READ_MS + sentence.text.length * READ_MS_PER_CHAR);
+
+const sentencesMs = (sentences) => sentences.reduce((sum, sentence) => sum + displayMs(sentence), 0);
+
+// Mid-sequence parts pass { lingerMs: 0, hide: false }, so their last sentence stays up through the pause.
+async function showSubtitles(sentences, token, { lingerMs = LINGER_MS, hide = true } = {}) {
     const el = getSubtitleEl();
 
-    for (const sentence of sentences) {
+    for (const [index, sentence] of sentences.entries()) {
         if (token !== speechToken) {
             return;
         }
 
         el.textContent = sentence.text;
         el.classList.replace('opacity-0', 'opacity-100');
-        await wait(sentence.durationMs);
+        await wait(displayMs(sentence) + (index === sentences.length - 1 ? lingerMs : 0));
     }
 
-    if (token === speechToken) {
+    if (hide && token === speechToken) {
         el.classList.replace('opacity-100', 'opacity-0');
     }
 }
@@ -183,7 +193,22 @@ function duckMusic() {
     return () => rampVolume(music, original, DUCK_MS * 2);
 }
 
-function pickLine(eggId, foundCount, totalEggs) {
+function readHeard(rotation) {
+    const stored = readJsonFromLocalStorage(HEARD_STORAGE_KEY, []);
+    return (Array.isArray(stored) ? stored : []).filter((line) => rotation.includes(line));
+}
+
+function markHeard(heard, line) {
+    lastGeneralLine = line;
+    heard.push(line);
+    writeJsonToLocalStorage(HEARD_STORAGE_KEY, heard);
+}
+
+function pickLine(eggId, foundCount, totalEggs, house) {
+    const hasTenPoints = HOUSES.includes(house);
+    const rotation = hasTenPoints ? [...GENERAL_LINES, TEN_POINTS] : GENERAL_LINES;
+    const toFile = (line) => (line === TEN_POINTS ? tenPointsLine(house) : line);
+
     // Revelio reveals the party details, so it always gets its own line.
     if (eggId === 'revelio') {
         return 'revelio';
@@ -197,42 +222,90 @@ function pickLine(eggId, foundCount, totalEggs) {
         return 'first-find';
     }
 
+    // Counts as heard, so the rotation doesn't bring it straight back.
+    if (foundCount === 2 && hasTenPoints) {
+        markHeard(readHeard(rotation), TEN_POINTS);
+        return toFile(TEN_POINTS);
+    }
+
     if (EGG_LINES[eggId] && Math.random() < 0.5) {
         return EGG_LINES[eggId];
     }
 
     // General lines take turns: none comes back before all of them have been heard, and a new round
     // never opens with the line that closed the previous one (stored in play order, so the last is known).
-    const stored = readJsonFromLocalStorage(HEARD_STORAGE_KEY, []);
-    const heard = (Array.isArray(stored) ? stored : []).filter((line) => GENERAL_LINES.includes(line));
-    let fresh = GENERAL_LINES.filter((line) => !heard.includes(line) && line !== lastGeneralLine);
+    const heard = readHeard(rotation);
+    let fresh = rotation.filter((line) => !heard.includes(line) && line !== lastGeneralLine);
 
     if (!fresh.length) {
         const previous = lastGeneralLine ?? heard.at(-1);
         heard.length = 0;
-        fresh = GENERAL_LINES.filter((line) => line !== previous);
+        fresh = rotation.filter((line) => line !== previous);
     }
 
     const line = fresh[Math.floor(Math.random() * fresh.length)];
-    lastGeneralLine = line;
-    heard.push(line);
-    writeJsonToLocalStorage(HEARD_STORAGE_KEY, heard);
-    return line;
+    markHeard(heard, line);
+    return toFile(line);
 }
 
-export function preloadDumbledore() {
+// house: the guest's house, so only their own 'Ten points to …' line is fetched.
+export function preloadDumbledore(house) {
     void loadSubtitles();
     unlockAudioContextOnGesture();
-    ['first-find', 'all-found', ...Object.values(EGG_LINES), ...GENERAL_LINES, FIRST_FIND_FOLLOW_UP].forEach((lineId) => {
+    const tenPoints = HOUSES.includes(house) ? [tenPointsLine(house)] : [];
+    const spellLines = Object.values(SPELL_LINES).flat();
+    ['first-find', 'all-found', ...Object.values(EGG_LINES), ...GENERAL_LINES, ...tenPoints, FIRST_FIND_FOLLOW_UP, ...spellLines].forEach((lineId) => {
         const audio = new Audio(new URL(`${lineId}.mp3`, AUDIO_DIR).href);
         audio.preload = 'auto';
     });
 }
 
+// Returns the element plus a promise that settles once it stops (ended, failed, or paused by stopLine).
 function playLine(lineId) {
     const audio = new Audio(new URL(`${lineId}.mp3`, AUDIO_DIR).href);
     const setLevel = createVoiceVolume(audio);
-    audio.play().then(() => fadeOutAtEnd(audio, setLevel), () => {});
+    const finished = new Promise((resolve) => {
+        ['ended', 'error', 'pause'].forEach((type) => audio.addEventListener(type, resolve, { once: true }));
+        audio.play().catch(resolve);
+    });
+    return { audio, setLevel, finished };
+}
+
+function stopLine(voice) {
+    voice.setLevel(0);
+    voice.audio.pause();
+}
+
+// Dumbledore speaks the incantation when the guest casts Nox or Lumos: a random line, never the same one
+// twice in a row. Resolves once he is done (or cut off by the next spell), so a reward can wait for him.
+export function speakSpell(spell) {
+    const lines = SPELL_LINES[spell] ?? [];
+
+    if (!lines.length) {
+        return Promise.resolve();
+    }
+
+    if (spellVoice) {
+        stopLine(spellVoice);
+    }
+
+    const options = lines.length > 1 ? lines.filter((line) => line !== lastSpellLines[spell]) : lines;
+    const lineId = options[Math.floor(Math.random() * options.length)];
+    lastSpellLines[spell] = lineId;
+
+    const restoreMusic = duckMusic();
+    const voice = playLine(lineId);
+    spellVoice = voice;
+    void showSubtitlesFor(lineId);
+
+    // Safety net in case the audio never reports back.
+    const timeout = wait(SPELL_MAX_MS);
+    return Promise.race([voice.finished, timeout]).then(() => {
+        restoreMusic();
+        if (spellVoice === voice) {
+            spellVoice = null;
+        }
+    });
 }
 
 // Plays the lines one after another. The subtitle timings drive the sequence, so a follow-up still
@@ -248,19 +321,28 @@ async function speakLines(parts, token) {
         }
 
         playLine(part.lineId);
-        await showSubtitles(part.sentences, token);
+        await showSubtitles(part.sentences, token, index < parts.length - 1 ? { lingerMs: 0, hide: false } : {});
     }
+}
+
+// Only the subtitles of a line, for voice clips played elsewhere (e.g. the Revelio incantation in map-sounds.js).
+// A later line from speakForEgg takes over the subtitle.
+export async function showSubtitlesFor(lineId) {
+    const token = ++speechToken;
+    const sentences = (await loadSubtitles()).get(lineId) ?? [];
+    await showSubtitles(sentences, token);
 }
 
 // Plays the right line for this find. Resolves (with how long he speaks, in ms) once it has started,
 // so the caller can keep the banner up for as long as he talks.
-export async function speakForEgg({ eggId, foundCount, totalEggs }) {
-    const lineId = pickLine(eggId, foundCount, totalEggs);
+export async function speakForEgg({ eggId, foundCount, totalEggs, house }) {
+    const lineId = pickLine(eggId, foundCount, totalEggs, house);
     const followUp = foundCount <= 1 && foundCount < totalEggs ? FIRST_FIND_FOLLOW_UP : undefined;
     const subtitles = await loadSubtitles();
     const parts = [lineId, followUp].filter(Boolean).map((id) => ({ lineId: id, sentences: subtitles.get(id) ?? [] }));
-    const durationMs = parts.reduce((total, part) => total + part.sentences.reduce((sum, sentence) => sum + sentence.durationMs, 0), 0)
-        + FOLLOW_UP_PAUSE_MS * (parts.length - 1);
+    const spokenMs = parts.reduce((total, part) => total + sentencesMs(part.sentences), 0);
+    // Includes the linger, so the banner stays up as long as the subtitle.
+    const durationMs = spokenMs && spokenMs + LINGER_MS + FOLLOW_UP_PAUSE_MS * (parts.length - 1);
     const token = ++speechToken;
 
     const restoreMusic = duckMusic();
