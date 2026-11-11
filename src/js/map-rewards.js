@@ -3,7 +3,8 @@
 // (which lights up as it lands), and a small house ribbon writes itself in, in the top corner away from the find so
 // it never covers what was just tapped. Without a visible House Cup button the "+10" just floats up and fades.
 // Finding an egg again (on any device) stays quiet. Guests who aren't coming or aren't sorted earn nothing.
-// Dumbledore comments on every find (map-dumbledore.js); the banner stays up while he speaks.
+// Dumbledore comments on every find (map-dumbledore.js); the banner stays up while he speaks. A new find while a
+// banner is up closes it (and cuts him off), and the new banner takes its place.
 import { sendEasterEggFound } from './api-client.js';
 import { preloadDumbledore, speakForEgg } from './map-dumbledore.js';
 import { playMapSound } from './map-sounds.js';
@@ -28,8 +29,12 @@ const EGG_HINTS = {
 // Let the egg's own effect get going before the reward joins in.
 const DEFAULT_DELAY_MS = 700;
 const BANNER_HOLD_MS = 3400;
+// The all-found ribbon stays a little longer: the note is still inking in.
+const COMPLETION_HOLD_MS = 4500;
 const BANNER_IN_MS = 750;
 const BANNER_OUT_MS = 600;
+// A banner that makes way for a newer one fades out this quickly.
+const BANNER_SWAP_MS = 250;
 // Reveal from left to right, like ink being written. The negative edges leave room for the glow.
 const INK_HIDDEN = 'inset(-24px 100% -24px -24px)';
 const INK_SHOWN = 'inset(-24px -24px -24px -24px)';
@@ -79,9 +84,14 @@ function flightPath(from, to) {
 function burstAt(x, y, points, { target = null, onArrive = () => {} } = {}) {
     const rootEl = document.createElement('div');
     rootEl.setAttribute('aria-hidden', 'true');
-    rootEl.className = 'pointer-events-none fixed z-[80] h-0 w-0';
+    rootEl.className = 'pointer-events-none fixed z-[80] m-0 h-0 w-0 overflow-visible border-0 bg-transparent p-0';
     rootEl.style.left = `${x}px`;
     rootEl.style.top = `${y}px`;
+    // A popover sits in the top layer, so the burst also shows over an open modal dialog (the finale's note).
+    const asPopover = typeof rootEl.showPopover === 'function';
+    if (asPopover) {
+        rootEl.popover = 'manual';
+    }
 
     const sparks = Array.from({ length: SPARK_COUNT }, () => {
         const el = document.createElement('span');
@@ -91,10 +101,13 @@ function burstAt(x, y, points, { target = null, onArrive = () => {} } = {}) {
     });
 
     const labelEl = document.createElement('span');
-    labelEl.className = 'absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-inkpot text-4xl text-amber-300 [text-shadow:0_0_14px_rgba(255,196,92,0.95),0_1px_2px_rgba(0,0,0,0.6)]';
+    labelEl.className = 'absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-inkpot text-4xl text-amber-300 [text-shadow:-1px_-1px_0_rgba(0,0,0,0.45),1px_-1px_0_rgba(0,0,0,0.45),-1px_1px_0_rgba(0,0,0,0.45),1px_1px_0_rgba(0,0,0,0.45),0_0_14px_rgba(255,196,92,0.95)]';
     labelEl.textContent = `+${points}`;
     rootEl.append(labelEl);
     document.body.append(rootEl);
+    if (asPopover) {
+        rootEl.showPopover();
+    }
 
     const animations = sparks.map((el, i) => {
         const angle = (i / SPARK_COUNT) * Math.PI * 2 + random(-0.2, 0.2);
@@ -150,11 +163,52 @@ function burstAt(x, y, points, { target = null, onArrive = () => {} } = {}) {
     Promise.allSettled(animations.map((animation) => animation.finished)).then(() => rootEl.remove());
 }
 
+// Points for a house: a "+N" bursts from point ({ x, y } in client pixels, default the middle of the screen) and flies
+// into the House Cup button (cup from initHouseCup), which lights up as it lands. Also used on the Sorting Hat page.
+export function burstHousePoints(house, points, { point = null, cup = null } = {}) {
+    playMapSound('spell', 0, { volume: 0.5, fadeAfterMs: 1400, fadeMs: 900 });
+
+    const glow = (HOUSES[house] ?? HOUSES.gryffindor).glow;
+    const target = cup?.target() ?? null;
+
+    if (reduceMotion()) {
+        // No burst or flight: the button just lights up.
+        if (target) {
+            cup.pulse(glow);
+        }
+        return;
+    }
+
+    const x = point?.x ?? window.innerWidth / 2;
+    const y = point?.y ?? window.innerHeight / 2;
+    burstAt(x, y, points, { target, onArrive: () => cup?.pulse(glow) });
+}
+
+// Moves the ribbon to the top of the top layer, above a modal dialog that opened after it.
+function raiseBanner(rootEl) {
+    if (!rootEl.popover) {
+        return;
+    }
+
+    try {
+        if (rootEl.matches(':popover-open')) {
+            rootEl.hidePopover();
+        }
+        rootEl.showPopover();
+    } catch {
+        // Not in the top layer then; it still shows over the page itself.
+    }
+}
+
 // One small parchment ribbon in a top corner, reused for every reward. It is also the live region for screen readers.
+// A popover, so raiseBanner() can put it in the top layer, above an open modal dialog (the finale's note).
 function createBanner() {
     const rootEl = document.createElement('div');
     rootEl.setAttribute('role', 'status');
-    rootEl.className = 'pointer-events-none fixed right-3 top-3 z-[80] max-w-[calc(100vw-1.5rem)] sm:top-4';
+    rootEl.className = 'pointer-events-none fixed bottom-auto top-3 z-[80] m-0 max-w-[calc(100vw-1.5rem)] overflow-visible border-0 bg-transparent p-0 sm:top-4';
+    if (typeof rootEl.showPopover === 'function') {
+        rootEl.popover = 'manual';
+    }
     rootEl.innerHTML = `
         <div data-reward-card class="flex items-center gap-2 rounded-full bg-cover bg-center py-1 pl-2 pr-5 opacity-0 shadow-[0_2px_10px_rgba(0,0,0,0.35)]">
             <img data-reward-crest alt="" class="h-7 w-7 shrink-0 rounded-full border border-charcoal/30 bg-amber-50/40 object-contain p-0.5">
@@ -168,6 +222,7 @@ function createBanner() {
             </div>
         </div>`;
     document.body.append(rootEl);
+    rootEl.showPopover?.();
 
     const cardEl = rootEl.querySelector('[data-reward-card]');
     cardEl.style.backgroundImage = `url("${parchmentUrl}")`;
@@ -184,15 +239,16 @@ function createBanner() {
 }
 
 // onStandings(allHousePoints, foundCount) runs after every recorded find (also repeat finds), for the House Cup.
-// cup: the House Cup from initMapHouseCup ({ target(), pulse(glow) }), or null when the guest has none.
+// cup: the House Cup from initHouseCup ({ target(), pulse(glow) }), or null.
 // onAllFound(result) runs once when the guest finds their last secret (the finale, map-finale.js).
 export function createEggRewards(guest, { onStandings = () => {}, cup = null, onAllFound = () => {} } = {}) {
     const found = new Set(guest?.foundEggIds ?? []);
     const pending = new Set();
     const canEarn = guest?.rsvpStatus === 'accepted' && Boolean(HOUSES[guest?.house]);
     let banner = null;
-    // Banners take turns, so two quick finds don't talk over each other.
-    let bannerQueue = Promise.resolve();
+    // The newest find owns the banner; an older one that is still up (or about to show) gives way.
+    let bannerToken = 0;
+    let bannerAnimation = null;
 
     if (canEarn) {
         // Up front: a live region only announces changes made after it is on the page.
@@ -202,23 +258,23 @@ export function createEggRewards(guest, { onStandings = () => {}, cup = null, on
         preloadDumbledore(guest.house);
     }
 
+    // Fades out the banner that is up, from wherever its animation is now.
+    const closeBanner = () => {
+        if (!bannerAnimation) {
+            return Promise.resolve();
+        }
+
+        const { cardEl } = banner;
+        const from = Number(window.getComputedStyle(cardEl).opacity);
+        bannerAnimation.cancel();
+        bannerAnimation = cardEl.animate([{ opacity: from }, { opacity: 0 }], { duration: from ? BANNER_SWAP_MS : 0, easing: 'ease-in', fill: 'both' });
+        return bannerAnimation.finished.catch(() => {});
+    };
+
     const showBanner = async (result, point, eggId) => {
+        const token = ++bannerToken;
         const house = HOUSES[result.house] ?? HOUSES[guest.house];
         const hint = EGG_HINTS[eggId] ?? '';
-        const { rootEl, cardEl, crestEl, titleEl, detailEl, hintEl, srEl } = banner;
-
-        // The corner opposite the find, so the castle or compass stays in view.
-        const onLeft = (point?.x ?? 0) > window.innerWidth / 2;
-        rootEl.classList.toggle('left-3', onLeft);
-        rootEl.classList.toggle('right-3', !onLeft);
-
-        crestEl.src = crestUrl(result.house ?? guest.house);
-        cardEl.style.boxShadow = `0 2px 10px rgba(0, 0, 0, 0.35), 0 0 12px ${house.glow}`;
-        titleEl.textContent = `${NUMBER_WORDS[result.pointsAwarded] ?? result.pointsAwarded} points to ${house.name}!`;
-        detailEl.textContent = `${result.foundCount}/${result.totalEggs}`;
-        hintEl.textContent = hint ? `“${hint}”` : '';
-        hintEl.classList.toggle('hidden', !hint);
-        srEl.textContent = `Secret ${result.foundCount} of ${result.totalEggs} found${hint ? `: ${hint}` : ''}. ${house.name} has ${result.housePoints} points.`;
 
         // The last secret: the finale starts as Dumbledore says "Mischief managed!", or after the banner if he can't.
         let finaleStarted = false;
@@ -229,11 +285,74 @@ export function createEggRewards(guest, { onStandings = () => {}, cup = null, on
             }
         };
 
-        const voiceMs = await speakForEgg({ ...result, house: result.house ?? guest.house }, { onLastSentence: startFinale }).catch((error) => {
-            console.warn('Dumbledore could not speak.', error);
-            return 0;
+        // He starts right away (cutting off the previous line) while the old banner fades out.
+        const [voiceMs] = await Promise.all([
+            speakForEgg({ ...result, house: result.house ?? guest.house }, { onLastSentence: startFinale }).catch((error) => {
+                console.warn('Dumbledore could not speak.', error);
+                return 0;
+            }),
+            closeBanner()
+        ]);
+
+        if (token !== bannerToken) {
+            return;
+        }
+
+        return playBanner({
+            houseKey: result.house ?? guest.house,
+            // The corner opposite the find, so the castle or compass stays in view.
+            onLeft: (point?.x ?? 0) > window.innerWidth / 2,
+            title: `${NUMBER_WORDS[result.pointsAwarded] ?? result.pointsAwarded} points to ${house.name}!`,
+            detail: `${result.foundCount}/${result.totalEggs}`,
+            hint: hint ? `“${hint}”` : '',
+            sr: `Secret ${result.foundCount} of ${result.totalEggs} found${hint ? `: ${hint}` : ''}. ${house.name} has ${result.housePoints} points.`,
+            holdMs: Math.max(BANNER_HOLD_MS, voiceMs + BANNER_AFTER_VOICE_MS)
+        }).then(startFinale);
+    };
+
+    // The finale's ribbon, as the Marauders' note appears: every secret found, and the bonus (when the API sent one).
+    const showCompletion = async (result) => {
+        const token = ++bannerToken;
+        await closeBanner();
+
+        if (token !== bannerToken) {
+            return;
+        }
+
+        const houseKey = HOUSES[result?.house] ? result.house : guest.house;
+        const houseName = HOUSES[houseKey].name;
+        const total = Number(result?.totalEggs) || found.size;
+        const bonus = Number(result?.bonusAwarded) || 0;
+
+        await playBanner({
+            houseKey,
+            onLeft: false,
+            title: `You found all ${total} secrets!`,
+            detail: bonus > 0 ? `+${bonus}` : '',
+            hint: bonus > 0 ? `${NUMBER_WORDS[bonus] ?? bonus} bonus points to ${houseName}` : '“Mischief managed”',
+            sr: `You found all ${total} secrets of the map.${bonus > 0 ? ` ${bonus} bonus points to ${houseName}.` : ''}`,
+            holdMs: COMPLETION_HOLD_MS
         });
-        const holdMs = Math.max(BANNER_HOLD_MS, voiceMs + BANNER_AFTER_VOICE_MS);
+    };
+
+    // Writes the ribbon in, holds it for holdMs, and fades it out; resolves once it has gone (or another took over).
+    const playBanner = ({ houseKey, onLeft, title, detail, hint, sr, holdMs }) => {
+        const { rootEl, cardEl, crestEl, titleEl, detailEl, hintEl, srEl } = banner;
+        const house = HOUSES[houseKey] ?? HOUSES[guest.house];
+
+        raiseBanner(rootEl);
+        // Inline, so they win over the popover's own inset: 0.
+        rootEl.style.left = onLeft ? '0.75rem' : 'auto';
+        rootEl.style.right = onLeft ? 'auto' : '0.75rem';
+
+        crestEl.src = crestUrl(houseKey);
+        cardEl.style.boxShadow = `0 2px 10px rgba(0, 0, 0, 0.35), 0 0 12px ${house.glow}`;
+        titleEl.textContent = title;
+        detailEl.textContent = detail;
+        hintEl.textContent = hint;
+        hintEl.classList.toggle('hidden', !hint);
+        srEl.textContent = sr;
+
         const total = BANNER_IN_MS + holdMs + BANNER_OUT_MS;
         const inAt = BANNER_IN_MS / total;
         const outAt = (BANNER_IN_MS + holdMs) / total;
@@ -246,33 +365,30 @@ export function createEggRewards(guest, { onStandings = () => {}, cup = null, on
                 { opacity: 1, clipPath: INK_SHOWN, filter: 'blur(0px)', offset: outAt, easing: 'ease-in' },
                 { opacity: 0, clipPath: INK_SHOWN, filter: 'blur(3px)' }
             ];
+        bannerAnimation?.cancel();
         const animation = cardEl.animate(keyframes, { duration: total, fill: 'both' });
-        return animation.finished.catch(() => {}).then(startFinale);
+        bannerAnimation = animation;
+        return animation.finished.then(() => {
+            if (bannerAnimation === animation) {
+                bannerAnimation = null;
+            }
+        }, () => {});
     };
 
     const celebrate = (result, point, eggId) => {
-        playMapSound('spell', 0, { volume: 0.5, fadeAfterMs: 1400, fadeMs: 900 });
-
-        const glow = (HOUSES[result.house] ?? HOUSES[guest.house]).glow;
-        const target = cup?.target() ?? null;
-
-        if (reduceMotion()) {
-            // No burst or flight: the button just lights up.
-            if (target) {
-                cup.pulse(glow);
-            }
-        } else {
-            const x = point?.x ?? window.innerWidth / 2;
-            const y = point?.y ?? window.innerHeight / 2;
-            burstAt(x, y, result.pointsAwarded, { target, onArrive: () => cup?.pulse(glow) });
-        }
-
-        bannerQueue = bannerQueue.then(() => showBanner(result, point, eggId));
+        burstHousePoints(HOUSES[result.house] ? result.house : guest.house, result.pointsAwarded, { point, cup });
+        showBanner(result, point, eggId).catch((error) => console.warn('Reward banner failed.', error));
     };
 
     return {
         // Whether this guest already has the egg (from the API or found this visit).
         hasFound: (eggId) => found.has(eggId),
+        // The finale (map-finale.js) calls this as the note appears. result: the API's answer for the last secret.
+        allFound(result) {
+            if (canEarn) {
+                showCompletion(result).catch((error) => console.warn('Completion banner failed.', error));
+            }
+        },
         // point: { x, y } in client pixels where the egg was found (default: the middle of the screen).
         // delayMs: how long after the find the reward may show at the earliest.
         found(eggId, { point = null, delayMs = DEFAULT_DELAY_MS } = {}) {

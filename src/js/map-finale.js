@@ -1,12 +1,15 @@
 // The finale, once a guest has found every secret of the Marauder's Map. As Dumbledore says "Mischief managed!"
 // (map-dumbledore.js), the background music makes way for "Fireworks" and rockets burst in the guest's house colours.
-// If the guest found the last secret by closing the map, the map unfolds itself again ("…not quite yet").
-// Then the Marauders' own note inks in, naming the guest an Honorary Marauder. From then on (also on later visits)
+// If the guest found the last secret by closing the map, the map unfolds itself again.
+// Then the Marauders' own note inks in, naming the guest an Honorary Student. From then on (also on later visits)
 // the guest's name on the map is underlined and opens the note again.
 // Reduced motion: no rockets, just a warm glow behind the note.
-import { EASTER_EGG_COUNT } from './api-client.js';
+// The bonus for finding everything ("+20", the API keeps score) bursts from the crest as the note appears and flies
+// into the House Cup button.
+import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js';
 import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js';
-import { isAudioMuted, playMapSound } from './map-sounds.js';
+import { burstHousePoints } from './map-rewards.js';
+import { isAudioMuted, playMapSound, preloadMapSounds } from './map-sounds.js';
 
 const HOUSES = {
     gryffindor: { name: 'Gryffindor', sparks: ['#ff3b2f', '#ff7a2f', '#ffb02e'] },
@@ -29,6 +32,7 @@ const MUSIC_BACK_MS = 2500;
 const NOTE_DELAY_MS = 3200;
 const NOTE_DELAY_REOPENED_MS = 4400;
 const INK_MS = 2200;
+const NUMBER_WORDS = { 10: 'Ten', 20: 'Twenty', 50: 'Fifty' };
 
 // Rockets: an opening salvo, a steady show, and a closing volley.
 const OPENING_SALVO_MS = [0, 180, 380];
@@ -429,8 +433,10 @@ function whenMapSettled(mapEl) {
     });
 }
 
-// openMap(): unfolds the map (map.js). Returns { play() }, or null for guests who can't earn house points.
-export function initMapFinale(guest, { mapEl, openMap }) {
+// openMap(): unfolds the map (map.js). cup: the House Cup from initHouseCup, or null.
+// onNote(result): runs as the note first appears (the all-found ribbon in map-rewards.js).
+// Returns { play(result) }, or null for guests who can't earn house points.
+export function initMapFinale(guest, { mapEl, openMap, cup = null, onNote = () => {} }) {
     const house = HOUSES[guest?.house] ? guest.house : null;
     const dialog = document.querySelector('[data-map-finale-dialog]');
 
@@ -439,7 +445,6 @@ export function initMapFinale(guest, { mapEl, openMap }) {
     }
 
     const inkEl = dialog.querySelector('[data-map-finale-ink]');
-    const notYetEl = dialog.querySelector('[data-map-finale-not-yet]');
     const crestEl = dialog.querySelector('[data-map-finale-crest]');
     const nameEl = dialog.querySelector('[data-map-finale-name]');
     const houseEl = dialog.querySelector('[data-map-finale-house]');
@@ -455,16 +460,31 @@ export function initMapFinale(guest, { mapEl, openMap }) {
         houseEl.textContent = `of House ${HOUSES[house].name}`;
     }
     if (foundEl) {
-        foundEl.textContent = `Finder of all ${EASTER_EGG_COUNT} secrets of the Marauder's Map.`;
+        const bonus = NUMBER_WORDS[COMPLETION_BONUS_POINTS] ?? COMPLETION_BONUS_POINTS;
+        foundEl.textContent = `You found all ${EASTER_EGG_COUNT} secrets of the Marauder's Map! ${bonus} bonus points to ${HOUSES[house].name}.`;
     }
 
-    let onClosed = null;
-    const close = () => void closeDialogAnimated(dialog).then(() => {
-        onClosed?.();
-        onClosed = null;
-    });
+    // Up front, so the pop starts together with the note (also when it opens without a tap, in the finale).
+    preloadMapSounds(['popup']);
 
-    dialog.querySelector('[data-map-finale-close]')?.addEventListener('click', close);
+    let onClosed = null;
+    let closing = false;
+    const close = () => {
+        if (!dialog.open || closing) {
+            return;
+        }
+
+        closing = true;
+        playMapSound('popup');
+        void closeDialogAnimated(dialog).then(() => {
+            closing = false;
+            onClosed?.();
+            onClosed = null;
+        });
+    };
+
+    // "Mischief managed" and the cross in the corner.
+    dialog.querySelectorAll('[data-map-finale-close]').forEach((button) => button.addEventListener('click', close));
     dialog.addEventListener('cancel', (event) => {
         event.preventDefault();
         close();
@@ -476,12 +496,25 @@ export function initMapFinale(guest, { mapEl, openMap }) {
         }
     });
 
-    // Resolves once the guest closes the note.
-    const showNote = ({ notYet = false } = {}) => new Promise((resolve) => {
+    // Where the bonus bursts from: the crest on the note (the middle of the screen if it has no size yet).
+    const bonusPoint = () => {
+        const rect = (crestEl ?? dialog).getBoundingClientRect();
+        return rect.width > 0
+            ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+            : null;
+    };
+
+    // Resolves once the guest closes the note. bonus: house points to burst from it as it appears (0 for none).
+    const showNote = (bonus = 0) => new Promise((resolve) => {
         onClosed = resolve;
-        notYetEl?.classList.toggle('hidden', !notYet);
+        // Reopened while it was still closing: showDialogAnimated cancels that close.
+        closing = false;
         playMapSound('popup');
         showDialogAnimated(dialog);
+
+        if (bonus > 0) {
+            burstHousePoints(house, bonus, { point: bonusPoint(), cup });
+        }
 
         if (inkEl instanceof HTMLElement && !reduceMotion()) {
             // Inked in from the top, like the map writing itself.
@@ -524,7 +557,8 @@ export function initMapFinale(guest, { mapEl, openMap }) {
     let played = false;
 
     return {
-        async play() {
+        // result: the API's answer for the last secret; its bonusAwarded (0 from an older API) flies in as "+20".
+        async play(result = null) {
             if (played) {
                 return;
             }
@@ -542,7 +576,9 @@ export function initMapFinale(guest, { mapEl, openMap }) {
             }
 
             await wait(reopened ? NOTE_DELAY_REOPENED_MS : NOTE_DELAY_MS);
-            await showNote({ notYet: reopened });
+            const noteClosed = showNote(Number(result?.bonusAwarded) || 0);
+            onNote(result);
+            await noteClosed;
             linkName();
             await fireworksDone;
             restoreMusic();

@@ -21,6 +21,8 @@ const ROUTE_CLEARANCE = 10;
 const RETRY_SPAWN_MS = 1200;
 // Name labels (easter egg): shown above a walker that is tapped, then inked away again.
 const LABEL_MS = 5000;
+// When a walker leaves while named, its name lingers until it has been shown at least this long.
+const LABEL_MIN_MS = 3000;
 const LABEL_FADE_MS = 900;
 const LABEL_OFFSET = 4;
 // A name tag stays centred above its walker; near the screen edge at most this share of it may slide out of view.
@@ -166,6 +168,25 @@ export function initMapFootsteps(mapEl) {
         fade.finished.then(() => label.el.remove(), () => label.el.remove());
     };
 
+    // Walkers that have left but whose name is still lingering (see LABEL_MIN_MS).
+    const lingering = new Set();
+    const releaseLabelSoon = (walker) => {
+        const label = walker.label;
+        const remaining = label ? label.shownAt + LABEL_MIN_MS - performance.now() : 0;
+
+        if (remaining <= 0) {
+            releaseLabel(walker);
+            return;
+        }
+
+        lingering.add(walker);
+        window.clearTimeout(label.timer);
+        label.timer = window.setTimeout(() => {
+            lingering.delete(walker);
+            releaseLabel(walker);
+        }, remaining);
+    };
+
     // `tag` is { name, el }: the caller draws the name tag, this places it above the walker.
     const showLabel = (walker, { name, el: tagEl }) => {
         const labelEl = document.createElement('span');
@@ -173,7 +194,12 @@ export function initMapFootsteps(mapEl) {
         labelEl.className = 'absolute block -translate-x-1/2 -translate-y-full';
         labelEl.append(tagEl);
         labelLayerEl.appendChild(labelEl);
-        walker.label = { el: labelEl, name, timer: window.setTimeout(() => releaseLabel(walker), LABEL_MS) };
+        walker.label = {
+            el: labelEl,
+            name,
+            shownAt: performance.now(),
+            timer: window.setTimeout(() => releaseLabel(walker), LABEL_MS),
+        };
         walker.syncSound?.();
         placeLabel(walker);
         // Glide along with the walker only after the first placement.
@@ -215,6 +241,7 @@ export function initMapFootsteps(mapEl) {
         if (nearest.label) {
             // Tapped again: keep the name a little longer.
             window.clearTimeout(nearest.label.timer);
+            nearest.label.shownAt = performance.now();
             nearest.label.timer = window.setTimeout(() => releaseLabel(nearest), LABEL_MS);
             return true;
         }
@@ -264,8 +291,10 @@ export function initMapFootsteps(mapEl) {
                 voice.stop(SOUND_FADE_MS);
                 freeVoices.push(voice);
             }
+            // Its voice may go to another walker now, so a lingering label must not touch it.
+            walker.syncSound = null;
             walkers.delete(walker);
-            releaseLabel(walker);
+            releaseLabelSoon(walker);
             busyRoutes.delete(routeIndex);
             if (isRunning) {
                 later(spawnWalker, random(300, 1500));
@@ -366,6 +395,8 @@ export function initMapFootsteps(mapEl) {
         busyRoutes.clear();
         walkers.forEach(releaseLabel);
         walkers.clear();
+        lingering.forEach(releaseLabel);
+        lingering.clear();
         voices.forEach((voice) => voice.stop(SOUND_FADE_MS));
         freeVoices.splice(0, freeVoices.length, ...voices);
     };

@@ -1,4 +1,6 @@
-import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
+import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=815a25f504';
+import { initHouseCup } from './house-cup.js?v=815a25f504';
+import './click-pop.js?v=815a25f504';
 
 const BASILISK_FRAME_SOURCES = [
     './assets/images/chamber/basilisk-stale-1.png',
@@ -31,7 +33,6 @@ const BASILISK_CHATBOX_DELAY_MS = BASILISK_BACKDROP_FADE_MS;
 const BASILISK_CONTINUE_DELAY_MS = 600;
 const BASILISK_CONTINUE_BUTTON_REVEAL_DELAY_MS = 250;
 const BASILISK_DIALOGUE_GROUP_REENTRY_DELAY_MS = BASILISK_FADE_IN_MS + 320;
-const BASILISK_GROUP_SEVEN_TO_EIGHT_DELAY_MS = 1400;
 const CHAMBER_MAP_REDIRECT_FADE_DURATION_MS = 1000;
 const CHAMBER_MAP_REDIRECT_DELAY_MS = 1050;
 const BASILISK_STAFF_FADE_IN_MS = 800;
@@ -108,34 +109,28 @@ async function loadBasiliskDialogue() {
         }
 
         const encounterGroup = groups.find((group) => Number(group?.groupId) === 1);
-        const secondGroup = groups.find((group) => Number(group?.groupId) === 2);
         const thirdGroup = groups.find((group) => Number(group?.groupId) === 3);
         const fourthGroup = groups.find((group) => Number(group?.groupId) === 4);
         const fifthGroup = groups.find((group) => Number(group?.groupId) === 5);
         const sixthGroup = groups.find((group) => Number(group?.groupId) === 6);
         const seventhGroup = groups.find((group) => Number(group?.groupId) === 7);
-        const eighthGroup = groups.find((group) => Number(group?.groupId) === 8);
 
         return {
             encounterDialogues: Array.isArray(encounterGroup?.dialogues) ? encounterGroup.dialogues : [],
-            secondGroupDialogues: Array.isArray(secondGroup?.dialogues) ? secondGroup.dialogues : [],
             thirdGroupDialogues: Array.isArray(thirdGroup?.dialogues) ? thirdGroup.dialogues : [],
             fourthGroupDialogues: Array.isArray(fourthGroup?.dialogues) ? fourthGroup.dialogues : [],
             fifthGroupDialogues: Array.isArray(fifthGroup?.dialogues) ? fifthGroup.dialogues : [],
             sixthGroupDialogues: Array.isArray(sixthGroup?.dialogues) ? sixthGroup.dialogues : [],
-            seventhGroupDialogues: Array.isArray(seventhGroup?.dialogues) ? seventhGroup.dialogues : [],
-            eighthGroupDialogues: Array.isArray(eighthGroup?.dialogues) ? eighthGroup.dialogues : []
+            seventhGroupDialogues: Array.isArray(seventhGroup?.dialogues) ? seventhGroup.dialogues : []
         };
     } catch {
         return {
             encounterDialogues: [],
-            secondGroupDialogues: [],
             thirdGroupDialogues: [],
             fourthGroupDialogues: [],
             fifthGroupDialogues: [],
             sixthGroupDialogues: [],
-            seventhGroupDialogues: [],
-            eighthGroupDialogues: []
+            seventhGroupDialogues: []
         };
     }
 }
@@ -522,6 +517,7 @@ function createBasiliskContinueLabel(labelText = '') {
     const label = document.createElement('button');
 
     label.type = 'button';
+    label.dataset.pop = 'small';
     label.setAttribute('aria-label', 'Continue basilisk dialogue');
     label.className = 'pointer-events-none absolute bottom-[max(4.5cqw,0.875rem)] right-[max(5.5cqw,1.125rem)] z-[6] opacity-0 transition-opacity ease-out';
     label.style.transitionDuration = `${BASILISK_FADE_IN_MS}ms`;
@@ -1165,13 +1161,11 @@ async function initChamberScene(guest) {
 
     const dialogueGroups = await loadBasiliskDialogue();
     const encounterDialogues = dialogueGroups.encounterDialogues;
-    const secondGroupDialogues = dialogueGroups.secondGroupDialogues;
     const thirdGroupDialogues = dialogueGroups.thirdGroupDialogues;
     const fourthGroupDialogues = dialogueGroups.fourthGroupDialogues;
     const fifthGroupDialogues = dialogueGroups.fifthGroupDialogues;
     const sixthGroupDialogues = dialogueGroups.sixthGroupDialogues;
     const seventhGroupDialogues = dialogueGroups.seventhGroupDialogues;
-    const eighthGroupDialogues = dialogueGroups.eighthGroupDialogues;
 
     if (encounterDialogues.length === 0) {
         return;
@@ -1199,13 +1193,11 @@ async function initChamberScene(guest) {
 
     const dialogueGroupById = {
         1: encounterDialogues,
-        2: secondGroupDialogues,
         3: thirdGroupDialogues,
         4: fourthGroupDialogues,
         5: fifthGroupDialogues,
         6: sixthGroupDialogues,
-        7: seventhGroupDialogues,
-        8: eighthGroupDialogues
+        7: seventhGroupDialogues
     };
 
     const transitionToDialogueGroup = (groupId, delayMs = 0) => {
@@ -1256,7 +1248,7 @@ async function initChamberScene(guest) {
             hideBasiliskContinueLabel(basiliskContinueLabel);
             isContinueVisible = false;
 
-            if (currentGroupId === 1 && secondGroupDialogues.length > 0) {
+            if (currentGroupId === 1) {
                 isTransitioningGroup = true;
 
                 if (!hasShownStaffLayer && cabinDepartment) {
@@ -1264,8 +1256,13 @@ async function initChamberScene(guest) {
                     hasShownStaffLayer = true;
                 }
 
-                transitionToDialogueGroup(2, BASILISK_STAFF_FADE_IN_MS);
-            } else if (currentGroupId === 2 || currentGroupId === 3) {
+                window.setTimeout(() => {
+                    currentGroupId = 2;
+                    startBasiliskStaffIdleSway(basiliskStaffLayer, prefersReducedMotion);
+                    isWandArmed = true;
+                    armBasiliskWand(basiliskStaffLayer, basiliskWandHitbox, prefersReducedMotion);
+                }, BASILISK_STAFF_FADE_IN_MS);
+            } else if (currentGroupId === 3) {
                 isTransitioningGroup = true;
                 isWandArmed = true;
                 armBasiliskWand(basiliskStaffLayer, basiliskWandHitbox, prefersReducedMotion);
@@ -1282,9 +1279,6 @@ async function initChamberScene(guest) {
 
                 transitionToDialogueGroup(7, BASILISK_DIALOGUE_GROUP_REENTRY_DELAY_MS);
             } else if (currentGroupId === 7) {
-                isTransitioningGroup = true;
-                transitionToDialogueGroup(8, BASILISK_GROUP_SEVEN_TO_EIGHT_DELAY_MS);
-            } else if (currentGroupId === 8) {
                 if (!hasStartedMapRedirect) {
                     hasStartedMapRedirect = true;
                     fadeOutBodyAndNavigateToMap();
@@ -1411,6 +1405,7 @@ async function bootstrapChamberPage() {
     }
 
     await whenDomReady();
+    initHouseCup(guest);
     void initChamberScene(guest);
 }
 

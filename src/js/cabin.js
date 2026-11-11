@@ -1,6 +1,9 @@
 import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js';
 import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js';
 import { parseRevealDelayMs } from './page-transitions.js';
+import { createCustomDishPage, initCustomDishForm } from './custom-dish.js';
+import { initHouseCup } from './house-cup.js';
+import { playPop } from './click-pop.js';
 
 const DEFAULT_CABIN_IMAGE = './assets/images/hogwarts-express-cabin-front-gryffindor.png';
 const BACKDROP_SELECTOR = '[data-cabin-backdrop]';
@@ -31,7 +34,6 @@ const DISH_SELECTED_SUMMARY_SELECTOR = '[data-selected-dish-summary]';
 const DISH_SELECTED_SUMMARY_LABEL_SELECTOR = '[data-selected-dish-label]';
 const DISH_SELECTED_SUMMARY_VALUE_SELECTOR = '[data-selected-dish-value]';
 const DISH_ERROR_SELECTOR = '[data-dish-error]';
-const DISH_SELECTION_LIMIT = 4;
 const DISH_ERROR_MESSAGES = {
     taken: 'Alas, another guest claimed one of your dishes just before you. Please choose again.',
     failed: 'The owl could not deliver your choice, please try again.'
@@ -39,6 +41,7 @@ const DISH_ERROR_MESSAGES = {
 const CABIN_EXIT_FADE_DURATION_MS = 1300;
 const CABIN_SCREEN_LOADER_DURATION_MS = 2200;
 const TROLLEY_SUBTITLE_FADE_MS = 300;
+const TROLLEY_SUBTITLE_GAP_MS = 250;
 const DISH_CAROUSEL_SWIPE_MIN_DISTANCE_PX = 48;
 const DISH_CAROUSEL_SWIPE_AXIS_RATIO = 1.2;
 const TROLLEY_SUBTITLES_URL = new URL('../assets/files/trolley-witch-subtitles.json', import.meta.url);
@@ -140,22 +143,32 @@ function showTrolleySubtitleSentence(subtitleEl, sentences, sentenceIndex, playb
     const isLastSentence = sentenceIndex >= sentences.length - 1;
     setTrolleySubtitleVisibility(subtitleEl, true);
 
+    if (isLastSentence) {
+        trolleySubtitleSentenceTimeoutId = window.setTimeout(() => {
+            if (playbackToken !== trolleySubtitlePlaybackToken) {
+                return;
+            }
+
+            setTrolleySubtitleVisibility(subtitleEl, false);
+            trolleySubtitleSentenceTimeoutId = null;
+        }, sentence.durationMs);
+        return;
+    }
+
+    // Hide before the next sentence; the gap comes out of this sentence's duration so the next one stays in sync with the audio.
+    const hideGapMs = Math.min(TROLLEY_SUBTITLE_FADE_MS + TROLLEY_SUBTITLE_GAP_MS, sentence.durationMs);
+
     trolleySubtitleSentenceTimeoutId = window.setTimeout(() => {
         if (playbackToken !== trolleySubtitlePlaybackToken) {
             return;
         }
 
-        if (!isLastSentence) {
-            showTrolleySubtitleSentence(subtitleEl, sentences, sentenceIndex + 1, playbackToken);
-            return;
-        }
-
         setTrolleySubtitleVisibility(subtitleEl, false);
 
-        window.setTimeout(() => {
-            trolleySubtitleSentenceTimeoutId = null;
-        }, TROLLEY_SUBTITLE_FADE_MS);
-    }, sentence.durationMs);
+        trolleySubtitleSentenceTimeoutId = window.setTimeout(() => {
+            showTrolleySubtitleSentence(subtitleEl, sentences, sentenceIndex + 1, playbackToken);
+        }, hideGapMs);
+    }, sentence.durationMs - hideGapMs);
 }
 
 function getTrolleySubtitleElement() {
@@ -427,7 +440,8 @@ async function loadDishCatalog() {
     return Array.isArray(data) ? data : [];
 }
 
-function renderDishChoiceGroups(courseGroups) {
+// includeCustomDishPage: adds "Your own dish" as the last page.
+function renderDishChoiceGroups(courseGroups, { includeCustomDishPage = false } = {}) {
     const carouselTrack = document.querySelector(DISH_CAROUSEL_TRACK_SELECTOR);
     const dotsContainer = document.querySelector(DISH_DOTS_SELECTOR);
 
@@ -485,6 +499,7 @@ function renderDishChoiceGroups(courseGroups) {
 
                 dishButton.type = 'button';
                 dishButton.dataset.dishChoice = dishId;
+                dishButton.dataset.pop = 'medium';
                 dishButton.dataset.dishLabel = dishLabel;
                 dishButton.dataset.reveal = 'true';
                 dishButton.style.setProperty('--reveal-delay', `${(pageIndex + 1) * 450 + 150 + dishIndex * 100}ms`);
@@ -525,9 +540,17 @@ function renderDishChoiceGroups(courseGroups) {
         carouselTrack.append(page);
     });
 
-    visibleGroupPages.forEach((_, dotIndex) => {
+    let pageCount = visibleGroupPages.length;
+
+    if (includeCustomDishPage) {
+        carouselTrack.append(createCustomDishPage(groups, (pageCount + 1) * 450));
+        pageCount += 1;
+    }
+
+    Array.from({ length: pageCount }).forEach((_, dotIndex) => {
         const dotButton = document.createElement('button');
         dotButton.type = 'button';
+        dotButton.dataset.pop = 'small';
         dotButton.className = 'h-1.5 w-1.5 rounded-full bg-[#1f1d1a]/35 opacity-70 transition-all duration-200';
         dotButton.setAttribute('aria-label', `Go to dishes page ${dotIndex + 1}`);
         dotButton.dataset.dishPageDot = String(dotIndex);
@@ -567,9 +590,12 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         return;
     }
 
+    let dishGroups = [];
+    document.querySelector('[data-custom-dish-intro]')?.classList.toggle('hidden', !guest?.customDishAllowed);
+
     try {
-        const dishGroups = await loadDishCatalog();
-        renderDishChoiceGroups(dishGroups);
+        dishGroups = await loadDishCatalog();
+        renderDishChoiceGroups(dishGroups, { includeCustomDishPage: Boolean(guest?.customDishAllowed) });
     } catch (error) {
         console.warn('Could not load dish catalog.', error);
     }
@@ -607,11 +633,12 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         const clampedIndex = Math.min(Math.max(targetIndex, 0), maxIndex);
 
         if (clampedIndex === currentDishPageIndex) {
-            return;
+            return false;
         }
 
         currentDishPageIndex = clampedIndex;
         syncDishCarousel();
+        return true;
     };
 
     prevButton.addEventListener('click', () => {
@@ -649,6 +676,11 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
             return;
         }
 
+        // Selecting text in the own-dish fields is not a swipe.
+        if (event.target instanceof Element && event.target.closest('input, select')) {
+            return;
+        }
+
         activePointerId = event.pointerId;
         swipeStartX = event.clientX;
         swipeStartY = event.clientY;
@@ -665,10 +697,10 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         const absY = Math.abs(deltaY);
 
         if (absX >= DISH_CAROUSEL_SWIPE_MIN_DISTANCE_PX && absX > absY * DISH_CAROUSEL_SWIPE_AXIS_RATIO) {
-            if (deltaX < 0) {
-                goToDishPage(currentDishPageIndex + 1);
-            } else {
-                goToDishPage(currentDishPageIndex - 1);
+            const moved = goToDishPage(currentDishPageIndex + (deltaX < 0 ? 1 : -1));
+
+            if (moved) {
+                playPop('small');
             }
         }
 
@@ -683,10 +715,39 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
 
     syncDishCarousel();
 
-    const selectedDishIds = new Set((guest?.dishIds ?? []).slice(0, DISH_SELECTION_LIMIT));
+    // null/undefined from the API = no limit.
+    const dishSelectionLimit = guest?.maxDishesPerGuest ?? Infinity;
+    const selectedDishIds = new Set((guest?.dishIds ?? []).slice(0, dishSelectionLimit));
     const occupiedDishIds = new Set();
     let isSubmittingSelection = false;
     const dishLabelById = new Map();
+    // Assigned below; its callbacks only run after that.
+    let syncDishState = () => {};
+
+    const customDishPage = document.querySelector('[data-custom-dish]');
+    const customDishForm = customDishPage instanceof HTMLElement
+        ? initCustomDishForm(customDishPage, {
+            courseGroups: dishGroups,
+            initial: guest?.customDish ?? null,
+            onChange: () => {
+                setDishError('');
+                syncDishState();
+            },
+            onSelectMenuDish: (dishId) => {
+                if (occupiedDishIds.has(dishId) || selectedDishIds.has(dishId) || selectedDishIds.size >= dishSelectionLimit) {
+                    return false;
+                }
+
+                selectedDishIds.add(dishId);
+                return true;
+            }
+        })
+        : null;
+
+    // An own dish takes a slot as soon as something is typed.
+    const selectionCount = () => selectedDishIds.size + (customDishForm?.hasName() ? 1 : 0);
+    const canConfirm = () => (selectedDishIds.size > 0 || Boolean(customDishForm?.getDish()))
+        && !customDishForm?.isBlocking();
 
     dishButtons.forEach((button) => {
         if (!(button instanceof HTMLButtonElement)) {
@@ -730,8 +791,8 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         const dishId = button.dataset.dishChoice || '';
         const isSelected = selectedDishIds.has(dishId);
         const isOccupied = occupiedDishIds.has(dishId);
-        const shouldDisable = isOccupied || (!isSelected && selectedDishIds.size >= DISH_SELECTION_LIMIT);
-        const shouldDim = !isSelected && selectedDishIds.size >= DISH_SELECTION_LIMIT;
+        const shouldDisable = isOccupied || (!isSelected && selectionCount() >= dishSelectionLimit);
+        const shouldDim = !isSelected && selectionCount() >= dishSelectionLimit;
         const dishNameElement = button.querySelector('[data-dish-choice-name]');
         const dishDescriptionElement = button.querySelector('[data-dish-choice-description]');
 
@@ -756,29 +817,37 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
         }
     };
 
-    const syncDishState = () => {
+    syncDishState = () => {
         dishButtons.forEach((button) => {
             if (button instanceof HTMLButtonElement) {
                 syncDishButtonState(button);
             }
         });
 
+        customDishForm?.setMenuState({
+            occupied: occupiedDishIds,
+            selected: selectedDishIds,
+            isLocked: !customDishForm.hasName() && selectedDishIds.size >= dishSelectionLimit
+        });
+
         if (selectedDishSummaryLabel instanceof HTMLElement && selectedDishSummaryValue instanceof HTMLElement) {
             const selectedDishLabels = Array.from(selectedDishIds)
                 .map((dishId) => dishLabelById.get(dishId) || '')
                 .filter((dishLabel) => dishLabel.length > 0);
+            const customDish = customDishForm?.getDish();
+
+            if (customDish) {
+                selectedDishLabels.push(`${customDish.name} (your own)`);
+            }
 
             selectedDishSummaryLabel.textContent = 'Selected dishes:';
             selectedDishSummaryValue.textContent = selectedDishLabels.length > 0 ? selectedDishLabels.join(', ') : '-';
         }
 
-        dishConfirmButton.disabled = selectedDishIds.size === 0;
-
-        if (selectedDishIds.size === 0) {
-            dishConfirmButton.classList.add('opacity-35', 'pointer-events-none');
-        } else {
-            dishConfirmButton.classList.remove('opacity-35', 'pointer-events-none');
-        }
+        const confirmable = canConfirm();
+        dishConfirmButton.disabled = !confirmable;
+        dishConfirmButton.classList.toggle('opacity-35', !confirmable);
+        dishConfirmButton.classList.toggle('pointer-events-none', !confirmable);
     };
 
     const revealDishPanel = () => {
@@ -860,6 +929,7 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
     const refreshTakenDishIds = () => fetchTakenCabinDishIds()
         .then((response) => {
             syncOccupiedDishIds(response?.data?.dishIds);
+            customDishForm?.setOthers(response?.data?.customDishes);
             syncDishState();
         })
         .catch((error) => {
@@ -902,7 +972,7 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
                 return;
             }
 
-            if (selectedDishIds.size >= DISH_SELECTION_LIMIT) {
+            if (selectionCount() >= dishSelectionLimit) {
                 return;
             }
 
@@ -915,19 +985,20 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
     void refreshTakenDishIds();
 
     dishConfirmButton.addEventListener('click', async () => {
-        if (selectedDishIds.size === 0 || isSubmittingSelection) {
+        if (!canConfirm() || isSubmittingSelection) {
             return;
         }
 
         isSubmittingSelection = true;
         const dishIds = Array.from(selectedDishIds);
+        const customDish = customDishForm?.getDish() ?? null;
 
         setDishError('');
         dishConfirmButton.disabled = true;
         dishConfirmButton.classList.add('opacity-35', 'pointer-events-none');
 
         try {
-            await sendCabinDishSelection({ dishIds });
+            await sendCabinDishSelection({ dishIds, customDish });
         } catch (error) {
             isSubmittingSelection = false;
 
@@ -944,6 +1015,13 @@ async function initDishSelection(guest, { skipIntro = false, editMode = false } 
                 // Sealed, unknown guest or no longer accepted: continue from the actual state.
                 const latestGuest = await getGuest({ refresh: true }).catch(() => null);
                 redirectToPage(getNextStep(latestGuest));
+                return;
+            }
+
+            if (isApiError(error, 400) && (error.code === 'custom_dish_on_menu' || error.code === 'invalid_dishes')) {
+                // The API explains what is wrong (e.g. own dish already on the menu after a menu change).
+                setDishError(error.message || DISH_ERROR_MESSAGES.failed);
+                syncDishState();
                 return;
             }
 
@@ -1036,6 +1114,7 @@ async function bootstrapCabinPage() {
     }
 
     await whenDomReady();
+    initHouseCup(guest);
 
     const editMode = isEditMode();
 

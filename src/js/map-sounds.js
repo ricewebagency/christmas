@@ -15,7 +15,9 @@ const SOUNDS = {
     // Dumbledore saying the incantation when the guest casts Revelio.
     revelioVoice: { src: './assets/music/dumbledore/revelio-spell-cast.mp3', volume: 0.9 },
     spin: { src: './assets/images/map/paper-spin.mp3', volume: 0.2 },
-    twinkle: { src: './assets/music/map/magic-twinkle.mp3', volume: 0.45 }
+    twinkle: { src: './assets/music/map/magic-twinkle.mp3', volume: 0.45 },
+    // Earned points landing in the House Cup button. `instant`, so it lands together with the "+10".
+    cupPoints: { src: './assets/music/points-in-cup-button.mp3', volume: 0.6, instant: true }
 };
 
 const templates = new Map();

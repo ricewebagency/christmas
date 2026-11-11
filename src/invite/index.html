@@ -45,11 +45,15 @@
     <script src="./js/background-audio.js" defer></script>
 </head>
 
-<body data-reveal-mode="after-envelope" data-reveal-order="random"
+<body data-reveal-mode="after-envelope"
     class="relative max-h-dvh min-h-dvh overflow-x-hidden bg-neutral-950 font-serif text-amber-50 antialiased">
     <audio id="background-audio" preload="auto" loop autoplay>
         <source src="./assets/music/diagon-alley.mp3" type="audio/mp3">
     </audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-1.mp3"></audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-2.mp3"></audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-3.mp3"></audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-4.mp3"></audio>
     <div aria-hidden="true"
         class="pointer-events-none absolute inset-0 z-0 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center bg-no-repeat opacity-100">
     </div>
@@ -72,37 +76,31 @@
             class="relative z-10 w-full flex flex-col gap-8 max-w-xl p-5 text-charcoal opacity-0 transition duration-700 ease-out motion-reduce:transform-none motion-reduce:transition-none sm:p-8 font-inkpot">
             <header class="text-center">
 
-                <p data-reveal style="--reveal-delay: 250ms;"
+                <p data-reveal style="--reveal-delay: 200ms;"
                     class="mt-8 text-left text-xl italic text-charcoal sm:text-2xl">
                     Dear <span id="guest-name" class="transition-opacity duration-700 ease-out">Guest</span>,</p>
                 <div
                     class="mt-8 space-y-5 text-left text-sm leading-relaxed tracking-wide text-charcoal/90 sm:text-base">
+                    <p data-reveal style="--reveal-delay: 600ms;">
+                        You are invited to Christmas at the Great Hall in <span id="event-location">Assendelft</span>, Christmas Eve, 24 December, 18:00.
+                    </p>
                     <p data-reveal style="--reveal-delay: 1000ms;">
-                        We are pleased to inform you that you have been invited to Christmas at the Great Hall. You will
-                        find all the necessary details further along in this invitation.
+                        We await your reply. Please send your owl before the 1st of December.
                     </p>
-                    <p data-reveal style="--reveal-delay: 1750ms;">
-                        The Great Hall will open its doors on Christmas eve, 24 December at 18:00. Please be so kind to reply to us your attendance in a letter.
-                    </p>
-                    <p data-reveal style="--reveal-delay: 2500ms;">
-                        We await your owl by no later than 1 December.
-                    </p>
-                    <p data-reveal data-reveal-last style="--reveal-delay: 2500ms;" class="pt-2">
-                        <a href="./rsvp/" data-invite-cta
-                            class="inline-flex items-center gap-2 text-sm underline tracking-wide text-charcoal/90 transition-opacity duration-[1200ms] hover:opacity-80 focus:opacity-0 focus-visible:opacity-0">
-                            <span data-invite-cta-label>Write a response letter</span>
-                            <svg aria-hidden="true" viewBox="0 0 24 24"
-                                class="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
-                                fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="1.7">
-                                <path d="M5 12h12m0 0-4-4m4 4-4 4" />
-                            </svg>
+                    <p data-reveal data-reveal-last style="--reveal-delay: 1400ms;" class="flex justify-start pt-4">
+                        <a href="./rsvp/" data-invite-cta data-pop="high"
+                            class="group inline-flex items-center gap-3 text-lg italic tracking-wide text-charcoal transition-opacity duration-[1200ms] hover:opacity-80 focus:opacity-0 focus-visible:opacity-0 sm:text-xl">
+                            <span data-invite-cta-label class="underline decoration-1 underline-offset-4">Send a response by owl</span>
+                            <span class="size-5 transition-transform duration-200 group-hover:translate-x-1">→</span>
                         </a>
                     </p>
+                    <p data-reveal data-invite-followup style="--reveal-delay: 1800ms;">
+                        More details will follow after your reply.
+                    </p>
                     <div class="pt-2">
-                        <p data-reveal style="--reveal-delay: 3250ms;" class="mt-2 text-base italic text-charcoal">Yours
+                        <p data-reveal style="--reveal-delay: 2200ms;" class="mt-2 text-base italic text-charcoal">Yours
                             sincerely,</p>
-                        <div data-reveal style="--reveal-delay: 4000ms;" class="mt-6">
+                        <div data-reveal style="--reveal-delay: 2600ms;" class="mt-6">
                             <p class="text-base font-semibold text-charcoal">Professor McGonagall</p>
                             <p class="text-sm text-charcoal/70">Deputy Headmistress
                             </p>
@@ -132,20 +130,20 @@
 
             <!-- Four real inputs: focus moves on by itself, Backspace goes back, pasting fills them all.
                  The form submits on its own once all four are filled. -->
-            <div data-pin-code-boxes role="group" aria-labelledby="pin-title"
-                aria-describedby="pin-hint pin-message" class="flex gap-3 sm:gap-4">
-                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                        autocorrect="off" spellcheck="false" aria-label="Digit 1 of 4"
-                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
-                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                        autocorrect="off" spellcheck="false" aria-label="Digit 2 of 4"
-                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
-                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                        autocorrect="off" spellcheck="false" aria-label="Digit 3 of 4"
-                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
-                    <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                        autocorrect="off" spellcheck="false" aria-label="Digit 4 of 4"
-                        class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+            <div data-pin-code-boxes role="group" aria-labelledby="pin-title" aria-describedby="pin-hint pin-message"
+                class="flex gap-3 sm:gap-4">
+                <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                    autocorrect="off" spellcheck="false" aria-label="Digit 1 of 4"
+                    class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+                <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                    autocorrect="off" spellcheck="false" aria-label="Digit 2 of 4"
+                    class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+                <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                    autocorrect="off" spellcheck="false" aria-label="Digit 3 of 4"
+                    class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
+                <input data-pin-code-digit type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                    autocorrect="off" spellcheck="false" aria-label="Digit 4 of 4"
+                    class="h-16 w-12 appearance-none rounded-none border-0 border-b-2 border-charcoal/40 bg-transparent p-0 text-center text-4xl text-charcoal caret-charcoal outline-none transition-colors duration-200 focus:border-charcoal disabled:opacity-60 sm:h-20 sm:w-14 sm:text-5xl">
             </div>
 
             <div class="flex min-h-[3rem] flex-col items-center gap-3">
@@ -153,7 +151,7 @@
                     class="max-w-sm text-sm italic leading-relaxed text-red-900 sm:text-base"></p>
 
                 <!-- Only shown when the castle could not be reached; the code is kept so one tap retries. -->
-                <button type="button" data-pin-retry
+                <button type="button" data-pin-retry data-pop="small"
                     class="hidden text-base italic text-charcoal/85 underline underline-offset-4 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:text-charcoal sm:text-lg">
                     Try again
                 </button>

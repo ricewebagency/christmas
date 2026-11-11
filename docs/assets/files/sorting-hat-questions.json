@@ -5,17 +5,11 @@
     "status": "reconstructed",
     "scale": [
       0,
-      25,
       50,
       100
     ],
-    "rule": "Add the selected answer's scores to each house total. The house with the highest total wins.",
-    "tie_break_order": [
-      "gryffindor",
-      "hufflepuff",
-      "ravenclaw",
-      "slytherin"
-    ]
+    "rule": "Add the selected answer's scores to each house total. The house with the highest total wins. Every question gives each house the same set of scores, so random answers give each house an equal chance.",
+    "tie_break": "random"
   },
   "questions": [
     {
@@ -486,8 +480,8 @@
           "scores": {
             "gryffindor": 0,
             "ravenclaw": 0,
-            "hufflepuff": 100,
-            "slytherin": 100
+            "hufflepuff": 50,
+            "slytherin": 50
           }
         },
         {
@@ -503,7 +497,7 @@
           "text": "Boredom",
           "scores": {
             "gryffindor": 100,
-            "ravenclaw": 0,
+            "ravenclaw": 50,
             "hufflepuff": 0,
             "slytherin": 100
           }
@@ -511,7 +505,7 @@
         {
           "text": "Being ignored",
           "scores": {
-            "gryffindor": 0,
+            "gryffindor": 50,
             "ravenclaw": 100,
             "hufflepuff": 0,
             "slytherin": 100
@@ -616,7 +610,7 @@
             "gryffindor": 100,
             "ravenclaw": 0,
             "hufflepuff": 0,
-            "slytherin": 50
+            "slytherin": 0
           }
         },
         {
@@ -682,7 +676,7 @@
         {
           "text": "Change the past",
           "scores": {
-            "gryffindor": 50,
+            "gryffindor": 100,
             "ravenclaw": 0,
             "hufflepuff": 0,
             "slytherin": 100
@@ -692,7 +686,7 @@
           "text": "Change your appearance at will",
           "scores": {
             "gryffindor": 50,
-            "ravenclaw": 100,
+            "ravenclaw": 50,
             "hufflepuff": 0,
             "slytherin": 0
           }
@@ -706,7 +700,7 @@
         {
           "text": "Apparition and Disapparition",
           "scores": {
-            "gryffindor": 100,
+            "gryffindor": 0,
             "ravenclaw": 0,
             "hufflepuff": 0,
             "slytherin": 100
@@ -787,7 +781,7 @@
             "gryffindor": 0,
             "ravenclaw": 100,
             "hufflepuff": 0,
-            "slytherin": 50
+            "slytherin": 0
           }
         },
         {
@@ -1096,16 +1090,16 @@
         {
           "text": "Tabby cat",
           "scores": {
-            "gryffindor": 50,
+            "gryffindor": 100,
             "ravenclaw": 0,
             "hufflepuff": 0,
-            "slytherin": 50
+            "slytherin": 0
           }
         },
         {
           "text": "Siamese cat",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 0,
             "hufflepuff": 0,
             "slytherin": 100
@@ -1114,16 +1108,16 @@
         {
           "text": "Ginger cat",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 50,
             "ravenclaw": 0,
             "hufflepuff": 0,
-            "slytherin": 100
+            "slytherin": 50
           }
         },
         {
           "text": "Black cat",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 0,
             "hufflepuff": 0,
             "slytherin": 100
@@ -1132,7 +1126,7 @@
         {
           "text": "White cat",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 0,
             "hufflepuff": 0,
             "slytherin": 100
@@ -1141,7 +1135,7 @@
         {
           "text": "Tawny owl",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 100,
             "hufflepuff": 0,
             "slytherin": 0
@@ -1150,7 +1144,7 @@
         {
           "text": "Screech owl",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 100,
             "hufflepuff": 0,
             "slytherin": 0
@@ -1159,7 +1153,7 @@
         {
           "text": "Brown owl",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 100,
             "hufflepuff": 0,
             "slytherin": 0
@@ -1168,34 +1162,34 @@
         {
           "text": "Snowy owl",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 100,
             "ravenclaw": 50,
-            "hufflepuff": 50,
+            "hufflepuff": 0,
             "slytherin": 0
           }
         },
         {
           "text": "Barn owl",
           "scores": {
-            "gryffindor": 25,
-            "ravenclaw": 100,
-            "hufflepuff": 0,
+            "gryffindor": 0,
+            "ravenclaw": 50,
+            "hufflepuff": 50,
             "slytherin": 0
           }
         },
         {
           "text": "Common toad",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 100,
             "ravenclaw": 0,
-            "hufflepuff": 100,
+            "hufflepuff": 50,
             "slytherin": 0
           }
         },
         {
           "text": "Natterjack toad",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 0,
             "hufflepuff": 100,
             "slytherin": 0
@@ -1204,16 +1198,16 @@
         {
           "text": "Dragon toad",
           "scores": {
-            "gryffindor": 50,
+            "gryffindor": 0,
             "ravenclaw": 0,
-            "hufflepuff": 50,
+            "hufflepuff": 100,
             "slytherin": 0
           }
         },
         {
           "text": "Harlequin toad",
           "scores": {
-            "gryffindor": 25,
+            "gryffindor": 0,
             "ravenclaw": 0,
             "hufflepuff": 100,
             "slytherin": 0
@@ -1222,10 +1216,10 @@
         {
           "text": "Three-toed tree toad",
           "scores": {
-            "gryffindor": 25,
-            "ravenclaw": 50,
-            "hufflepuff": 50,
-            "slytherin": 0
+            "gryffindor": 50,
+            "ravenclaw": 0,
+            "hufflepuff": 0,
+            "slytherin": 50
           }
         }
       ]

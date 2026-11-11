@@ -1,6 +1,17 @@
-import { getGuest, getInvitationData, isApiError, sendSortingHouseResult } from './api-client.js';
+import { getGuest, getInvitationData, isApiError, sendSortingHouseResult, SORTING_HOUSE_POINTS } from './api-client.js';
 import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js';
+import { initHouseCup } from './house-cup.js';
+import { speakTenPoints } from './map-dumbledore.js';
+import { burstHousePoints } from './map-rewards.js';
 import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js';
+import { playPop } from './click-pop.js';
+
+// Pause between the hat announcing the house and the "+10" for it.
+const SORTING_POINTS_DELAY_MS = 500;
+const HAT_REVEAL_MAX_WAIT_MS = 15000;
+
+// Set in bootstrapSortingPage; told the house once the Sorting Hat decides.
+let houseCup = null;
 
 const STORAGE_KEY = 'christmas-at-the-great-hall.sorting-hat';
 const HOUSE_ORDER = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
@@ -243,16 +254,11 @@ function formatHouseName(house) {
 }
 
 function getWinningHouse(scores) {
-    return HOUSE_ORDER.reduce((bestHouse, currentHouse) => {
-        const bestScore = scores[bestHouse] ?? 0;
-        const currentScore = scores[currentHouse] ?? 0;
+    const bestScore = Math.max(...HOUSE_ORDER.map((house) => scores[house] ?? 0));
+    const tiedHouses = HOUSE_ORDER.filter((house) => (scores[house] ?? 0) === bestScore);
 
-        if (currentScore > bestScore) {
-            return currentHouse;
-        }
-
-        return bestHouse;
-    }, HOUSE_ORDER[0]);
+    // Break ties randomly so no house is favoured by its position in HOUSE_ORDER.
+    return tiedHouses[Math.floor(Math.random() * tiedHouses.length)];
 }
 
 function setEnterState(element) {
@@ -319,6 +325,7 @@ function createAnswerCarousel(answers, onSubmitAnswer) {
 
     const prevButton = document.createElement('button');
     prevButton.type = 'button';
+    prevButton.dataset.pop = 'small';
     prevButton.className = 'pointer-events-auto inline-flex h-9 w-9 items-center justify-center text-amber-100/90 transition-colors duration-200 hover:text-amber-50 disabled:cursor-not-allowed disabled:opacity-35';
     prevButton.style.position = 'relative';
     prevButton.style.right = '12px';
@@ -327,6 +334,7 @@ function createAnswerCarousel(answers, onSubmitAnswer) {
 
     const nextButton = document.createElement('button');
     nextButton.type = 'button';
+    nextButton.dataset.pop = 'small';
     nextButton.className = 'pointer-events-auto inline-flex h-9 w-9 items-center justify-center text-amber-100/90 transition-colors duration-200 hover:text-amber-50 disabled:cursor-not-allowed disabled:opacity-35';
     nextButton.style.position = 'relative';
     nextButton.style.left = '12px';
@@ -335,6 +343,7 @@ function createAnswerCarousel(answers, onSubmitAnswer) {
 
     const chooseButton = document.createElement('button');
     chooseButton.type = 'button';
+    chooseButton.dataset.pop = 'high';
     chooseButton.className = 'group flex w-full max-w-full box-border items-center justify-center gap-x-3 rounded-none px-4 py-3 text-left text-base font-inkpot text-amber-50 transition-colors duration-200 hover:text-amber-100 focus:outline-none focus-visible:outline-none sm:text-base';
 
     const chooseButtonLabel = document.createElement('span');
@@ -361,6 +370,7 @@ function createAnswerCarousel(answers, onSubmitAnswer) {
     const dots = answers.map((_, index) => {
         const dot = document.createElement('button');
         dot.type = 'button';
+        dot.dataset.pop = 'small';
         dot.className = 'h-1.5 w-1.5 rounded-full bg-amber-100/45 transition-all duration-200';
         dot.setAttribute('aria-label', `Go to answer ${index + 1}`);
         dot.addEventListener('click', () => {
@@ -410,6 +420,7 @@ function createAnswerCarousel(answers, onSubmitAnswer) {
     answers.forEach((answer, index) => {
         const slide = document.createElement('button');
         slide.type = 'button';
+        slide.dataset.pop = 'medium';
         slide.className = 'group h-full w-full shrink-0 text-left';
 
         const copy = document.createElement('div');
@@ -452,12 +463,17 @@ function createAnswerCarousel(answers, onSubmitAnswer) {
             return;
         }
 
+        const previousIndex = selectedAnswerIndex;
+
         if (deltaX < 0) {
             goToNext();
-            return;
+        } else {
+            goToPrevious();
         }
 
-        goToPrevious();
+        if (selectedAnswerIndex !== previousIndex) {
+            playPop('small');
+        }
     });
 
     chooseButton.addEventListener('click', () => {
@@ -692,6 +708,8 @@ function initSortingQuiz(guest) {
     let questions = [];
     let hasSentResult = false;
     let sortingResultPromise = Promise.resolve();
+    // Points for being sorted come once: not when re-sorting (they move along with the house).
+    let hasCelebratedSortingPoints = Boolean(guest?.house);
     let isTransitioning = false;
     let hasStarted = false;
     let currentGuestName = '';
@@ -950,9 +968,10 @@ function initSortingQuiz(guest) {
         window.location.href = getPageUrl(nextPage);
     }
 
+    // Resolves with the saved guest state, or null when it couldn't be saved.
     async function saveSortingResult(payload) {
         try {
-            await sendSortingHouseResult(payload);
+            return await sendSortingHouseResult(payload);
         } catch (error) {
             if (isApiError(error, 409) || isApiError(error, 404) || isApiError(error, 403)) {
                 // Not accepted, deadline passed or unknown guest: continue from the actual state.
@@ -963,10 +982,44 @@ function initSortingQuiz(guest) {
 
             // One retry for flaky connections.
             await new Promise((resolve) => window.setTimeout(resolve, 1000));
-            await sendSortingHouseResult(payload).catch((retryError) => {
+            return sendSortingHouseResult(payload).catch((retryError) => {
                 console.warn('Could not save the sorting result.', retryError);
+                return null;
             });
         }
+    }
+
+    // Once the hat has spoken and the house is saved: "+10" flies from the house name into the House Cup button
+    // and Dumbledore awards the points.
+    async function celebrateSortingPoints(house, savePromise, hatDone) {
+        const [state] = await Promise.all([savePromise, hatDone]);
+
+        if (state?.house !== house) {
+            showChamberButton();
+            return;
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, SORTING_POINTS_DELAY_MS));
+
+        // The "+10" flies as he says "Ten points…", after his welcome; still once if he can't speak.
+        // The continue button fades in with it, so it's there as he finishes.
+        let awarded = false;
+        const awardPoints = () => {
+            if (awarded) {
+                return;
+            }
+            awarded = true;
+            showChamberButton();
+            houseCup?.update(state.housePoints);
+            const rect = resultHouseEl.getBoundingClientRect();
+            const point = rect.width > 0 ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
+            burstHousePoints(house, SORTING_HOUSE_POINTS, { point, cup: houseCup });
+        };
+
+        await speakTenPoints(house, { onTenPoints: awardPoints }).catch((error) => {
+            console.warn('Dumbledore could not speak.', error);
+        });
+        awardPoints();
     }
 
     function handleChamberButtonClick() {
@@ -1007,6 +1060,7 @@ function initSortingQuiz(guest) {
 
         chamberButton = document.createElement('button');
         chamberButton.type = 'button';
+        chamberButton.dataset.pop = 'high';
         chamberButton.className = 'mx-auto !mt-16 inline-flex w-auto max-w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-center font-inkpot text-base text-amber-50/80 transition-colors duration-200 hover:opacity-80 focus:outline-none focus-visible:outline-none sm:text-lg';
         chamberButton.textContent = isResorting ? 'Back to the Marauder\u2019s Map \u2192' : 'Go to the Hogwarts Express \u2192';
         chamberButton.addEventListener('click', handleChamberButtonClick);
@@ -1116,6 +1170,9 @@ function initSortingQuiz(guest) {
         triggerSortingHatImagePulse(HOUSE_REVEAL_SORTING_HAT_IMAGE_PULSE_DURATION_MS);
         setHouseResultBackdrop(house);
 
+        // Settles once the hat has finished announcing the house (or couldn't), so Dumbledore doesn't talk over him.
+        let hatDone = Promise.resolve();
+
         const finalizeReveal = () => {
             setHouseResultBackdropHalfVisible();
             setSortingOverlayHalfVisible();
@@ -1125,13 +1182,13 @@ function initSortingQuiz(guest) {
             optionsEl.innerHTML = '';
             resultHouseEl.textContent = `${formatHouseName(house)}!`;
             resultHouseEl.classList.add('text-center');
-            scheduleChamberButtonReveal();
             resultCopyEl.classList.add('hidden');
             resultCopyEl.textContent = '';
             restartButton.classList.add('hidden');
 
             if (!hasSentResult) {
                 hasSentResult = true;
+                houseCup?.setHouse(house);
 
                 sortingResultPromise = saveSortingResult({
                     guestName: currentGuestName,
@@ -1139,7 +1196,16 @@ function initSortingQuiz(guest) {
                     scores: { ...scores },
                     questionsAnswered: questions.length
                 });
+
+                if (!hasCelebratedSortingPoints) {
+                    hasCelebratedSortingPoints = true;
+                    // Shows the continue button itself, once Dumbledore awards the points.
+                    void celebrateSortingPoints(house, sortingResultPromise, hatDone);
+                    return;
+                }
             }
+
+            scheduleChamberButtonReveal();
         };
 
         stopHouseRevealFinalizationTimer();
@@ -1159,7 +1225,7 @@ function initSortingQuiz(guest) {
         houseRevealLocked = true;
         houseRevealAudio = createAudio(source, 0.95);
 
-        playAudioAndWait(houseRevealAudio)
+        const revealPlayback = playAudioAndWait(houseRevealAudio)
             .catch((error) => {
                 console.info('Sorting Hat reveal audio was blocked by the browser.', error);
             })
@@ -1167,6 +1233,8 @@ function initSortingQuiz(guest) {
                 clearSortingHatSubtitleForSource(source);
                 houseRevealLocked = false;
             });
+        // Capped, in case the audio never reports back.
+        hatDone = Promise.race([revealPlayback, new Promise((resolve) => window.setTimeout(resolve, HAT_REVEAL_MAX_WAIT_MS))]);
     }
 
     function showRevealHouseButton() {
@@ -1180,6 +1248,7 @@ function initSortingQuiz(guest) {
 
         revealHouseButton = document.createElement('button');
         revealHouseButton.type = 'button';
+        revealHouseButton.dataset.pop = 'high';
         revealHouseButton.className = 'mx-auto mt-2 inline-flex w-auto max-w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-center font-inkpot text-3xl text-amber-50 transition-colors duration-200 hover:text-amber-200 focus:outline-none focus-visible:outline-none sm:text-4xl';
         revealHouseButton.textContent = 'Reveal house';
 
@@ -1421,6 +1490,7 @@ async function bootstrapSortingPage() {
     }
 
     await whenDomReady();
+    houseCup = initHouseCup(guest);
     initSortingQuiz(guest);
 }
 

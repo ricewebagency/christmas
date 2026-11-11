@@ -125,11 +125,11 @@
         renderAdminLink();
         // api-client.js fires this whenever fresh guest state arrives (also on this page).
         window.addEventListener("guest-admin-change", renderAdminLink);
-        // map-house-cup.js fires this when its button appears between the volume and admin buttons.
+        // house-cup.js fires this when its button appears between the volume and admin buttons.
         window.addEventListener("house-cup-visible", renderAdminLink);
     };
 
-    // One slot up while the map's House Cup button takes the slot above the volume button.
+    // One slot up while the House Cup button takes the slot above the volume button.
     const ADMIN_POSITION_CLASS = "bottom-[3.25rem] sm:bottom-14";
     const ADMIN_POSITION_ABOVE_HOUSE_CUP_CLASS = "bottom-[5.75rem] sm:bottom-24";
 
@@ -145,6 +145,7 @@
         if (!adminLink) {
             adminLink = document.createElement("a");
             adminLink.href = ADMIN_URL;
+            adminLink.dataset.pop = "small";
             adminLink.innerHTML = ICON_ADMIN;
             adminLink.setAttribute("aria-label", "Admin Panel");
             adminLink.title = "Admin Panel";

@@ -1,5 +1,4 @@
 import {
-    getRandomExitDelayMs,
     lockInitialViewportHeight,
     pathEndsWith,
     runRevealExitSequence,
@@ -14,6 +13,7 @@ import {
 } from "./api-client.js";
 import { getNextStep, getPageName, getPageUrl, whenDomReady } from "./guest-flow.js";
 import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js";
+import "./click-pop.js";
 
 const RSVP_LABELS = {
     pending: "Awaiting your response",
@@ -41,8 +41,14 @@ const ENVELOPE_OPEN_SOUND_SOURCE = new URL("../assets/music/short-paper-turn.wav
 const ENVELOPE_OPEN_SOUND_VOLUME = 0.6;
 let envelopeOpenSound = null;
 
-const RSVP_EXIT_FADE_DURATION_MS = 800;// Without a valid code the letter is shown first; the pincode dialog follows once its opening lines appeared.
-const PIN_DIALOG_DELAY_MS = 1800;
+const RSVP_EXIT_FADE_DURATION_MS = 600;
+const RSVP_EXIT_DELAY_OPTIONS_MS = [0, 250, 500, 750];
+// Without a valid code the letter is shown first; the pincode dialog follows once its opening lines appeared.
+const PIN_DIALOG_DELAY_MS = 1200;
+
+function getRsvpExitDelayMs() {
+    return RSVP_EXIT_DELAY_OPTIONS_MS[Math.floor(Math.random() * RSVP_EXIT_DELAY_OPTIONS_MS.length)];
+}
 const PIN_ERROR_PARAMS = ["pin-error", "retry-after"];
 
 function pad(value) {
@@ -91,7 +97,8 @@ function renderInvitationData(data) {
         guestNameEl.textContent = data.guestName;
     }
 
-    if (eventLocationEl) {
+    // Keep the default in the HTML when the API has no location.
+    if (eventLocationEl && data.location) {
         eventLocationEl.textContent = data.location;
     }
 
@@ -259,6 +266,9 @@ function setupInviteCta(guest) {
         return;
     }
 
+    // Only true before the guest replied.
+    document.querySelector("[data-invite-followup]")?.classList.add("hidden");
+
     const ctaLink = document.querySelector("[data-invite-cta]");
     const ctaLabel = document.querySelector("[data-invite-cta-label]");
     const nextStep = getNextStep(guest);
@@ -277,7 +287,7 @@ function setupRsvpExitTransition() {
         matchLink: (link) => link.hasAttribute("data-invite-cta") || pathEndsWith(link.getAttribute("href"), "/rsvp"),
         getDelayMs: () => runRevealExitSequence({
             fadeDurationMs: RSVP_EXIT_FADE_DURATION_MS,
-            getDelayMs: getRandomExitDelayMs
+            getDelayMs: getRsvpExitDelayMs
         })
     });
 }

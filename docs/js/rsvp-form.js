@@ -1,6 +1,7 @@
-import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=fd0efeab0f';
-import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
-import { getRandomExitDelayMs } from './page-transitions.js?v=fd0efeab0f';
+import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=815a25f504';
+import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=815a25f504';
+import { getRandomExitDelayMs } from './page-transitions.js?v=815a25f504';
+import './click-pop.js?v=815a25f504';
 
 const ATTENDANCE_CHOICE_MAP = {
     yes: 'accepted',
@@ -40,6 +41,29 @@ async function playRevealExitSequence(root = document) {
     });
 
     await wait(maxDelayMs + animationDurationMs);
+}
+
+// The owl may hoot a little past the letter fading out, but never holds up the next page longer than this.
+const OWL_HOOT_MAX_WAIT_MS = 4000;
+const OWL_HOOT_VOLUME = 0.5;
+
+// Resolves when the hoot has ended, failed, or OWL_HOOT_MAX_WAIT_MS has passed since sending.
+function playOwlHoot() {
+    const audio = document.querySelector('audio[data-owl-hoot]');
+    if (!(audio instanceof HTMLAudioElement)) {
+        return Promise.resolve();
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = OWL_HOOT_VOLUME;
+
+    const ended = new Promise((resolve) => {
+        audio.addEventListener('ended', resolve, { once: true });
+        audio.play().catch(resolve);
+    });
+
+    return Promise.race([ended, wait(OWL_HOOT_MAX_WAIT_MS)]);
 }
 
 function populateGuestName(guest) {
@@ -113,18 +137,14 @@ function initRsvpFormSubmission(guest) {
     };
 
     const setActiveChoice = (activeChoice) => {
+        // Selected styling is driven by aria-pressed variants in the markup.
         choiceButtons.forEach((button) => {
-            button.classList.add('opacity-45');
-            button.classList.remove('opacity-100');
-            button.classList.remove('text-black');
-            button.classList.add('text-charcoal/85');
+            button.setAttribute('aria-pressed', String(button === activeChoice));
         });
 
-        if (activeChoice instanceof HTMLButtonElement) {
-            activeChoice.classList.remove('opacity-45');
-            activeChoice.classList.add('opacity-100');
-            activeChoice.classList.remove('text-charcoal/85');
-            activeChoice.classList.add('text-black');
+        // Submit button stays dimmed until a choice has been made.
+        if (submitButton instanceof HTMLButtonElement) {
+            submitButton.classList.toggle('opacity-50', !(activeChoice instanceof HTMLButtonElement));
         }
     };
 
@@ -187,9 +207,12 @@ function initRsvpFormSubmission(guest) {
             submitButton.classList.add('opacity-60', 'pointer-events-none');
         }
 
+        const owlHootDone = playOwlHoot();
+
         try {
             await playRevealExitSequence(rsvpRoot);
             const updatedGuest = await sendAttendanceResponse(attendanceResponse);
+            await owlHootDone;
             redirectToPage(getNextStep(updatedGuest));
         } catch (error) {
             if (isApiError(error, 403) || isApiError(error, 404)) {

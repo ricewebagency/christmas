@@ -99,11 +99,28 @@
     ]
   },
   {
+    "fileName": "well-cast.mp3",
+    "sentences": [
+      {
+        "text": "Well cast.",
+        "durationMs": 1700
+      },
+      {
+        "text": "A party awaits in Assendelft.",
+        "durationMs": 3200
+      }
+    ]
+  },
+  {
     "fileName": "revelio.mp3",
     "sentences": [
       {
-        "text": "Well cast. A party awaits in Assendelft.",
-        "durationMs": 3500
+        "text": "Well cast.",
+        "durationMs": 1700
+      },
+      {
+        "text": "A party awaits in Assendelft.",
+        "durationMs": 1800
       },
       {
         "text": "I'm told the pudding there is quite magical.",
@@ -167,6 +184,12 @@
         "text": "The map rewards those who look closely.",
         "durationMs": 2400
       }
+    ]
+  },
+  {
+    "fileName": "A new member deserves a proper welcome.mp3",
+    "sentences": [
+      { "text": "A new member deserves a proper welcome.", "durationMs": 2550 }
     ]
   },
   {

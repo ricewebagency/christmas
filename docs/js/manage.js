@@ -1,6 +1,7 @@
-import { API_BASE_URL, getStoredGuestCode } from './api-client.js?v=fd0efeab0f';
-import { redirectToPage } from './guest-flow.js?v=fd0efeab0f';
-import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=fd0efeab0f';
+import { API_BASE_URL, getStoredGuestCode, setGuestCode } from './api-client.js?v=815a25f504';
+import { redirectToPage } from './guest-flow.js?v=815a25f504';
+import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=815a25f504';
+import './click-pop.js?v=815a25f504';
 
 const SETTINGS_STORAGE_KEY = 'christmas-at-the-great-hall.manage-settings';
 const DISHES_VIEW_STORAGE_KEY = 'christmas-at-the-great-hall.manage-dishes-view';
@@ -16,7 +17,7 @@ const RSVP_BADGES = {
 const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const HOUSE_LABELS = { gryffindor: 'Gryffindor', hufflepuff: 'Hufflepuff', ravenclaw: 'Ravenclaw', slytherin: 'Slytherin' };
 // Easter eggs op de Marauder's Map (zelfde volgorde als de API); elke eerste vondst = 10 huispunten.
-const EGG_LABELS = { compass: 'Kompas', footsteps: 'Voetstappen', castle: 'Kasteel', snow: 'Sneeuw (schudden/snel tikken)', nox: 'Nox/Lumos (plat leggen/vegen)', revelio: 'Revelio', mischief: 'Mischief managed' };
+const EGG_LABELS = { compass: 'Kompas', footsteps: 'Voetstappen', castle: 'Kasteel', snow: 'Sneeuw', nox: 'Nox/Lumos', revelio: 'Revelio', mischief: 'Mischief managed' };
 const BADGE_BASE = 'inline-flex items-center rounded-full px-1.5 py-px text-[11px] ring-1 ring-inset';
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
@@ -41,7 +42,7 @@ const state = {
     // Kopie van het menu tijdens bewerken; null = niet aan het bewerken.
     catalogDraft: null,
     catalogDirty: false,
-    sort: { key: 'guestName', dir: 1 },
+    sort: { key: 'default', dir: 1 },
     lastCreated: [],
     // Animatie-bookkeeping.
     totalsRendered: false,
@@ -193,6 +194,7 @@ function showMessage(text, tone = 'info') {
 
     const close = document.createElement('button');
     close.type = 'button';
+    close.dataset.pop = 'small';
     close.className = 'shrink-0 opacity-60 transition hover:opacity-100';
     close.setAttribute('aria-label', 'Sluiten');
     close.textContent = '✕';
@@ -436,7 +438,11 @@ function normalizeGuest(guest) {
         rsvpStatus,
         house,
         dishes: dishes.map((dish) => ({ id: String(dish?.id ?? ''), name: String(dish?.name ?? '') })),
-        dishCount: dishes.length,
+        // Eigen gerecht { name, course, description } of null; staat los van het menu.
+        customDish: guest?.customDish?.name
+            ? { name: String(guest.customDish.name), course: String(guest.customDish.course ?? ''), description: guest.customDish.description ? String(guest.customDish.description) : null }
+            : null,
+        dishCount: dishes.length + (guest?.customDish?.name ? 1 : 0),
         dishesChosen: Boolean(guest?.dishesChosen),
         rsvpUpdatedAt: guest?.rsvpUpdatedAt ?? null,
         sortedAt: guest?.sortedAt ?? null,
@@ -506,7 +512,7 @@ function renderTotals() {
     const container = el('manage-totals');
     container.innerHTML = [
         statGroup('RSVP', [
-            statTile('Gasten', num('guests', totals.guests ?? guests.length)),
+            statTile('Uitgenodigd',num('guests', totals.guests ?? guests.length)),
             statTile('Aanwezig', num('accepted', totals.accepted ?? accepted.length), pct(totals.accepted ?? accepted.length, totals.guests ?? guests.length)),
             statTile('Afgemeld', num('declined', totals.declined ?? 0)),
             statTile('Open', num('pending', totals.pending ?? 0))
@@ -517,7 +523,8 @@ function renderTotals() {
         ]),
         statGroup('Gerechten', [
             statTile('Geclaimd', ratio('claimed', totals.dishesClaimed ?? 0, totals.dishesTotal ?? 0)),
-            statTile('Vrij', num('free', totals.dishesFree ?? 0))
+            statTile('Vrij', num('free', totals.dishesFree ?? 0)),
+            statTile('Eigen', num('custom', totals.customDishes ?? getCustomDishes().length))
         ]),
         renderHouses()
     ].join('');
@@ -566,21 +573,36 @@ function getFilteredGuests() {
         .filter((guest) => !query
             || guest.guestName.toLowerCase().includes(query)
             || guest.code.includes(query)
-            || guest.dishes.some((dish) => dish.name.toLowerCase().includes(query)))
-        .sort((a, b) => {
-            const left = a[key] ?? '';
-            const right = b[key] ?? '';
+            || guest.dishes.some((dish) => dish.name.toLowerCase().includes(query))
+            || Boolean(guest.customDish?.name.toLowerCase().includes(query)))
+        // Bij gelijke waarden altijd op naam (oplopend).
+        .sort((a, b) => compareGuests(a, b, key, dir) || compareText(a.guestName, b.guestName));
+}
 
-            if (typeof left === 'number' && typeof right === 'number') {
-                return (left - right) * dir;
-            }
+function compareText(left, right) {
+    return String(left).localeCompare(String(right), 'nl', { sensitivity: 'base' });
+}
 
-            // Lege waarden altijd onderaan.
-            if (left === '' && right !== '') return 1;
-            if (right === '' && left !== '') return -1;
+function compareGuests(a, b, key, dir) {
+    // Standaard: admins, dan meeste easter eggs, dan meeste gerechten.
+    if (key === 'default') {
+        return ((Number(b.isAdmin) - Number(a.isAdmin))
+            || (b.foundEggIds.length - a.foundEggIds.length)
+            || (b.dishCount - a.dishCount)) * dir;
+    }
 
-            return String(left).localeCompare(String(right), 'nl', { sensitivity: 'base' }) * dir;
-        });
+    const left = a[key] ?? '';
+    const right = b[key] ?? '';
+
+    if (typeof left === 'number' && typeof right === 'number') {
+        return (left - right) * dir;
+    }
+
+    // Lege waarden altijd onderaan.
+    if (left === '' && right !== '') return 1;
+    if (right === '' && left !== '') return -1;
+
+    return compareText(left, right) * dir;
 }
 
 function guestDate(label, value) {
@@ -598,6 +620,7 @@ const ICONS = {
     reset: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" />',
     delete: '<path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
     check: '<path d="M20 6 9 17l-5-5" />',
+    edit: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
     sparkle: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />'
 };
 
@@ -611,12 +634,16 @@ function renderGuestRow(guest) {
     const code = escapeHtml(guest.code);
     const name = escapeHtml(guest.guestName);
     const expanded = state.expandedCodes.has(guest.code);
-    const dishCount = guest.dishes.length;
+    const dishCount = guest.dishCount;
+    const custom = guest.customDish;
     const dishTitle = dishCount
-        ? guest.dishes.map((dish) => `#${dish.id} ${dish.name}`).join('\n')
+        ? [...guest.dishes.map((dish) => `#${dish.id} ${dish.name}`), ...(custom ? [`eigen: ${custom.name} (${custom.course})`] : [])].join('\n')
         : 'Nog geen gerechten gekozen';
+    const customItem = custom
+        ? `<li><span class="text-accent">eigen</span> ${escapeHtml(custom.name)} <span class="text-neutral-500">· ${escapeHtml(custom.course)}${custom.description ? ` · ${escapeHtml(custom.description)}` : ''}</span></li>`
+        : '';
     const dishes = dishCount
-        ? `<ul class="space-y-0.5">${guest.dishes.map((dish) => `<li><span class="text-neutral-500">#${escapeHtml(dish.id)}</span> ${escapeHtml(dish.name)}</li>`).join('')}</ul>`
+        ? `<ul class="space-y-0.5">${guest.dishes.map((dish) => `<li><span class="text-neutral-500">#${escapeHtml(dish.id)}</span> ${escapeHtml(dish.name)}</li>`).join('')}${customItem}</ul>`
         : '<p class="text-neutral-600">Nog geen gerechten gekozen.</p>';
     const eggCount = guest.foundEggIds.length;
     const eggNames = guest.foundEggIds.map((eggId) => EGG_LABELS[eggId] ?? eggId);
@@ -642,7 +669,7 @@ function renderGuestRow(guest) {
                     <span class="flex h-7 w-7 shrink-0 items-center justify-center">${houseLogo(guest.house)}</span>
                     <span class="truncate font-medium text-neutral-100">${name}</span>
                 </button>
-                <div class="order-last flex w-full items-center gap-2 pl-[4.375rem] sm:order-none sm:w-auto sm:pl-0">
+                <div class="order-last flex w-full items-center gap-2 sm:order-none sm:w-auto">
                     <span class="w-10 font-mono text-xs text-accent" title="Pincode">${code}</span>
                     <span class="w-[4.5rem]">${badge(RSVP_BADGES[guest.rsvpStatus] ?? RSVP_BADGES.pending, RSVP_LABELS[guest.rsvpStatus] ?? guest.rsvpStatus)}</span>
                     <span class="w-14">
@@ -654,6 +681,8 @@ function renderGuestRow(guest) {
                     ${eggCounter}
                 </div>
                 <div class="flex shrink-0 items-center">
+                    <button type="button" data-action="edit" data-code="${code}" title="Aanpassen" aria-label="${name} aanpassen"
+                        class="${ICON_BUTTON} hover:text-accent">${icon('edit')}</button>
                     <button type="button" data-action="copy-link" data-code="${code}" title="Link kopiëren" aria-label="Link van ${name} kopiëren"
                         class="${ICON_BUTTON} hover:text-accent">${icon('link')}</button>
                     <button type="button" data-action="reset" data-code="${code}" title="Resetten" aria-label="${name} resetten"
@@ -669,9 +698,7 @@ function renderGuestRow(guest) {
                         <dl class="max-w-xs space-y-0.5">
                             ${guestDate('RSVP', guest.rsvpUpdatedAt)}
                             ${guestDate('Gesorteerd', guest.sortedAt)}
-                            ${guestDate('Gerechten', guest.dishesUpdatedAt)}
-                            ${guestDate('Aangemaakt', guest.createdAt)}
-                        </dl>
+                            ${guestDate('Gerechten', guest.dishesUpdatedAt)}                        </dl>
                     </div>
                 </div>
             </div>
@@ -779,7 +806,30 @@ function renderDishItem(dish, guest) {
         </li>`;
 }
 
-function renderCourse(course, index, claimedBy) {
+// Eigen gerechten van gasten die komen, met de gast erbij.
+function getCustomDishes() {
+    return state.guests
+        .filter((guest) => guest.customDish && guest.rsvpStatus === 'accepted')
+        .map((guest) => ({ ...guest.customDish, guest }));
+}
+
+function customDishMatchesCourse(customDish, course) {
+    const name = customDish.course.toLowerCase();
+    return [course?.course, course?.course_nl].some((value) => String(value ?? '').toLowerCase() === name);
+}
+
+function renderCustomDishItem(customDish) {
+    const { guest } = customDish;
+    const title = customDish.description ? ` title="${escapeHtml(customDish.description)}"` : '';
+
+    return `
+        <li class="flex items-center justify-between gap-3 py-1.5 pl-9 pr-3 transition-colors hover:bg-neutral-800/40"${title}>
+            <span><span class="text-accent">eigen</span> ${escapeHtml(customDish.name)}${customDish.description ? ` <span class="text-neutral-500">· ${escapeHtml(customDish.description)}</span>` : ''}</span>
+            <span class="text-right text-xs"><span class="inline-flex items-center gap-2 text-neutral-100">${escapeHtml(guest.guestName)}${guest.house ? houseLogo(guest.house, 'h-5 w-5') : ''}</span></span>
+        </li>`;
+}
+
+function renderCourse(course, index, claimedBy, customDishes = []) {
     const key = courseKey(course, index);
     const dishes = Array.isArray(course?.dishes) ? course.dishes : [];
     const claimed = dishes.filter((dish) => claimedBy.has(String(dish.id))).length;
@@ -787,9 +837,12 @@ function renderCourse(course, index, claimedBy) {
     const percent = dishes.length ? Math.round((claimed / dishes.length) * 100) : 0;
     const expanded = state.expandedCourses.has(key);
     const visible = state.dishesFreeOnly ? dishes.filter((dish) => !claimedBy.has(String(dish.id))) : dishes;
-    const list = visible.length
-        ? visible.map((dish) => renderDishItem(dish, claimedBy.get(String(dish.id)))).join('')
+    // Eigen gerechten zijn nooit "vrij": niet tonen met het vrij-filter aan.
+    const visibleCustom = state.dishesFreeOnly ? [] : customDishes;
+    const list = visible.length || visibleCustom.length
+        ? visible.map((dish) => renderDishItem(dish, claimedBy.get(String(dish.id)))).join('') + visibleCustom.map(renderCustomDishItem).join('')
         : '<li class="py-1.5 pl-9 pr-3 text-neutral-500">Alles geclaimd.</li>';
+    const customCount = customDishes.length ? ` <span class="text-accent">+${customDishes.length} eigen</span>` : '';
 
     return `
         <div data-course-key="${escapeHtml(key)}" class="overflow-hidden rounded-md border border-neutral-800">
@@ -800,7 +853,7 @@ function renderCourse(course, index, claimedBy) {
                 <span aria-hidden="true" class="hidden h-1.5 w-24 overflow-hidden rounded-full bg-neutral-800 sm:block">
                     <span class="block h-full rounded-full transition-all duration-700 ${full ? 'bg-emerald-500' : 'bg-accent'}" style="width: ${percent}%"></span>
                 </span>
-                <span class="w-24 text-right text-xs ${full ? 'text-emerald-400' : 'text-neutral-400'}">${claimed}/${dishes.length} geclaimd</span>
+                <span class="min-w-24 text-right text-xs ${full ? 'text-emerald-400' : 'text-neutral-400'}">${claimed}/${dishes.length} geclaimd${customCount}</span>
             </button>
             <div data-course-dishes class="${collapseClass(expanded)}" ${expanded ? '' : 'inert'}>
                 <div class="min-h-0 overflow-hidden">
@@ -904,7 +957,17 @@ function renderDishes() {
     }
 
     const container = el('manage-dishes');
-    container.innerHTML = state.catalog.map((course, index) => renderCourse(course, index, claimedBy)).join('');
+    const customDishes = getCustomDishes();
+    const courseHtml = state.catalog.map((course, index) =>
+        renderCourse(course, index, claimedBy, customDishes.filter((dish) => customDishMatchesCourse(dish, course))));
+    // Gang van een eigen gerecht bestaat niet meer (menu aangepast): apart tonen.
+    const orphaned = customDishes.filter((dish) => !state.catalog.some((course) => customDishMatchesCourse(dish, course)));
+
+    if (orphaned.length) {
+        courseHtml.push(renderCourse({ course_nl: 'Eigen gerechten (gang niet meer op menu)', dishes: [] }, state.catalog.length, claimedBy, orphaned));
+    }
+
+    container.innerHTML = courseHtml.join('');
     updateExpandAllButton(claimedBy);
 
     if (!state.dishesRendered) {
@@ -1010,7 +1073,7 @@ function renderCatalogEditor(claimedBy) {
                             <input data-field="course_nl" value="${escapeHtml(course.course_nl)}" placeholder="Gang (NL)" aria-label="Gang (NL)" class="${EDIT_INPUT_CLASS} font-semibold">
                             <input data-field="course" value="${escapeHtml(course.course)}" placeholder="Course (EN)" aria-label="Gang (EN)" class="${EDIT_INPUT_CLASS}">
                         </div>
-                        <button type="button" data-edit="remove-course" ${courseClaimed ? 'disabled' : ''}
+                        <button type="button" data-edit="remove-course" data-pop="small"${courseClaimed ? 'disabled' : ''}
                             title="${courseClaimed ? 'Bevat gekozen gerechten' : 'Gang verwijderen'}" aria-label="Gang verwijderen" class="${EDIT_REMOVE_CLASS}">✕</button>
                     </div>
                     ${course.dishes.map((dish, di) => {
@@ -1020,7 +1083,7 @@ function renderCatalogEditor(claimedBy) {
                             <div data-dish="${di}" class="space-y-1.5 rounded-md bg-neutral-950/60 p-2">
                                 <div class="flex items-center justify-between gap-2 text-xs">
                                     <span class="text-neutral-500">${dish.id ? `#${escapeHtml(dish.id)}` : 'nieuw'}${guest ? ` · gekozen door <span class="text-neutral-300">${escapeHtml(guest.guestName)}</span>` : ''}</span>
-                                    <button type="button" data-edit="remove-dish" ${guest ? 'disabled' : ''}
+                                    <button type="button" data-edit="remove-dish" data-pop="small"${guest ? 'disabled' : ''}
                                         title="${guest ? 'Gekozen door een gast' : 'Gerecht verwijderen'}" aria-label="Gerecht verwijderen" class="${EDIT_REMOVE_CLASS}">✕</button>
                                 </div>
                                 <div class="grid gap-1.5 sm:grid-cols-2">
@@ -1035,8 +1098,8 @@ function renderCatalogEditor(claimedBy) {
         }).join('')}
         <button type="button" data-edit="add-course" class="w-full rounded-md border border-dashed border-neutral-700 px-3 py-2 hover:border-accent hover:text-accent">+ Gang</button>
         <div class="sticky bottom-0 flex justify-end gap-2 border-t border-neutral-800 bg-neutral-900 py-3">
-            <button type="button" data-edit="cancel" class="rounded-md border border-neutral-700 px-3 py-2 hover:border-neutral-500">Annuleren</button>
-            <button type="button" data-edit="save" class="rounded-md bg-accent px-3 py-2 font-semibold text-neutral-950 hover:bg-amber-300 disabled:opacity-50">Menu opslaan</button>
+            <button type="button" data-edit="cancel" data-pop="small" class="rounded-md border border-neutral-700 px-3 py-2 hover:border-neutral-500">Annuleren</button>
+            <button type="button" data-edit="save" data-pop="high" class="rounded-md bg-accent px-3 py-2 font-semibold text-neutral-950 hover:bg-amber-300 disabled:opacity-50">Menu opslaan</button>
         </div>`;
 }
 
@@ -1186,6 +1249,11 @@ async function handleTableClick(event) {
         return;
     }
 
+    if (button.dataset.action === 'edit') {
+        openEditDialog(guest);
+        return;
+    }
+
     if (button.dataset.action === 'copy-link') {
         copyText(guest.inviteUrl);
         button.innerHTML = icon('check');
@@ -1276,7 +1344,7 @@ function addCreateRow({ focus = false } = {}) {
     row.innerHTML = `
         <input type="text" data-field="name" placeholder="Harry Potter" autocomplete="off" class="${CREATE_INPUT_CLASS}">
         <input type="text" data-field="code" placeholder="1234" inputmode="numeric" maxlength="4" autocomplete="off" class="${CREATE_INPUT_CLASS} font-mono">
-        <button type="button" data-remove-row aria-label="Rij verwijderen" class="rounded-md text-neutral-500 transition hover:rotate-90 hover:text-red-400">✕</button>`;
+        <button type="button" data-remove-row data-pop="small" aria-label="Rij verwijderen" class="rounded-md text-neutral-500 transition hover:rotate-90 hover:text-red-400">✕</button>`;
     el('manage-create-rows').append(row);
 
     if (focus) {
@@ -1402,6 +1470,107 @@ function renderCreated() {
     stagger(el('manage-create-list').children, 60);
 }
 
+// ---------- Gast aanpassen ----------
+
+function openEditDialog(guest) {
+    const dialog = el('manage-edit-dialog');
+    dialog.dataset.code = guest.code;
+    el('manage-edit-name').value = guest.guestName;
+    el('manage-edit-code').value = guest.code;
+    updateEditHint();
+    // Toasts in de dialog plaatsen, anders vallen ze achter de modal (top layer).
+    dialog.append(el('manage-message'));
+    dialog.showModal();
+    el('manage-edit-name').select();
+}
+
+function updateEditHint() {
+    el('manage-edit-hint').classList.toggle('hidden', el('manage-edit-code').value === el('manage-edit-dialog').dataset.code);
+}
+
+function handleEditCodeInput(event) {
+    event.target.value = event.target.value.replace(/\D/g, '').slice(0, 4);
+    updateEditHint();
+}
+
+async function handleEdit(event) {
+    event.preventDefault();
+    const dialog = el('manage-edit-dialog');
+    const guest = findGuest(dialog.dataset.code);
+    const guestName = el('manage-edit-name').value.trim();
+    const code = el('manage-edit-code').value.trim();
+
+    if (!guest) {
+        dialog.close();
+        return;
+    }
+
+    if (!guestName) {
+        showMessage('Naam ontbreekt.', 'error');
+        return;
+    }
+
+    if (!/^[0-9]{4}$/.test(code)) {
+        showMessage('Pincode moet 4 cijfers zijn.', 'error');
+        return;
+    }
+
+    const body = {};
+
+    if (guestName !== guest.guestName) {
+        body.guestName = guestName;
+    }
+
+    if (code !== guest.code) {
+        body.code = code;
+    }
+
+    if (!Object.keys(body).length) {
+        dialog.close();
+        return;
+    }
+
+    const submit = event.submitter;
+    submit.disabled = true;
+
+    try {
+        const updated = await request('PATCH', `/api/manage/guests/${encodeURIComponent(guest.code)}`, body);
+        const newCode = updated?.code ?? code;
+
+        if (newCode !== guest.code) {
+            moveLocalCode(guest.code, newCode);
+        }
+
+        state.highlightCode = newCode;
+        dialog.close();
+        await loadAll();
+        showMessage(body.code
+            ? `${guestName} heeft nu pincode ${newCode}. Stuur de nieuwe link.`
+            : `${guestName} is aangepast.`, 'success');
+    } catch (error) {
+        showMessage(error.message, 'error');
+    } finally {
+        submit.disabled = false;
+    }
+}
+
+// Na een nieuwe pincode: open rij en eigen inlog (pincode als sleutel) meeverhuizen, anders volgt een 401.
+function moveLocalCode(oldCode, newCode) {
+    if (state.expandedCodes.delete(oldCode)) {
+        state.expandedCodes.add(newCode);
+    }
+
+    if (state.settings.key === oldCode) {
+        state.settings.key = newCode;
+        el('manage-key').value = newCode;
+        writeJsonToLocalStorage(SETTINGS_STORAGE_KEY, state.settings);
+    }
+
+    if (getStoredGuestCode() === oldCode) {
+        setGuestCode(newCode);
+    }
+}
+
 // ---------- Init ----------
 
 function init() {
@@ -1426,6 +1595,16 @@ function init() {
     el('manage-create-dialog').addEventListener('close', handleCreateDialogClose);
     el('manage-create-dialog').addEventListener('click', (event) => {
         // Klik op de backdrop sluit de dialog.
+        if (event.target === event.currentTarget) {
+            event.currentTarget.close();
+        }
+    });
+    el('manage-edit').addEventListener('submit', handleEdit);
+    el('manage-edit-code').addEventListener('input', handleEditCodeInput);
+    el('manage-edit-close').addEventListener('click', () => el('manage-edit-dialog').close());
+    el('manage-edit-cancel').addEventListener('click', () => el('manage-edit-dialog').close());
+    el('manage-edit-dialog').addEventListener('close', handleCreateDialogClose);
+    el('manage-edit-dialog').addEventListener('click', (event) => {
         if (event.target === event.currentTarget) {
             event.currentTarget.close();
         }

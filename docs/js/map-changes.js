@@ -1,4 +1,4 @@
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=fd0efeab0f';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=815a25f504';
 
 // "Make changes" on the map opens a dialog with the change options (dishes, house, RSVP).
 export function initMapChangesDialog({ deadline = '' } = {}) {

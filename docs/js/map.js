@@ -1,16 +1,23 @@
-import { fetchDishCatalog } from './api-client.js?v=fd0efeab0f';
-import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=fd0efeab0f';
-import { initMapChangesDialog } from './map-changes.js?v=fd0efeab0f';
-import { initMapEasterEggs } from './map-easter-eggs.js?v=fd0efeab0f';
-import { initMapFinale } from './map-finale.js?v=fd0efeab0f';
-import { initMapFootsteps } from './map-footsteps.js?v=fd0efeab0f';
-import { initMapHouseCup } from './map-house-cup.js?v=fd0efeab0f';
-import { initMapReveal } from './map-reveal.js?v=fd0efeab0f';
-import { createEggRewards } from './map-rewards.js?v=fd0efeab0f';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=fd0efeab0f';
+import { fetchDishCatalog } from './api-client.js?v=815a25f504';
+import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=815a25f504';
+import { initMapChangesDialog } from './map-changes.js?v=815a25f504';
+import { initMapEasterEggs } from './map-easter-eggs.js?v=815a25f504';
+import { initMapFinale } from './map-finale.js?v=815a25f504';
+import { initMapFootsteps } from './map-footsteps.js?v=815a25f504';
+import { initHouseCup } from './house-cup.js?v=815a25f504';
+import { initMapReveal } from './map-reveal.js?v=815a25f504';
+import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=815a25f504';
+import { createEggRewards } from './map-rewards.js?v=815a25f504';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=815a25f504';
+import './click-pop.js?v=815a25f504';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
+// Same exit as the /invite letter: lines fade out with a random stagger.
+const DECLINED_EXIT_FADE_DURATION_MS = 600;
+const DECLINED_EXIT_DELAY_OPTIONS_MS = [0, 250, 500, 750];
+const getDeclinedExitDelayMs = () =>
+    DECLINED_EXIT_DELAY_OPTIONS_MS[Math.floor(Math.random() * DECLINED_EXIT_DELAY_OPTIONS_MS.length)];
 const MAP_CLOSED_VIEWPORT_WIDTH_RATIO = 0.92;
 // Peek window within the mapPeek keyframes (tailwind.config.js: 25% to 60%).
 const MAP_PEEK_START = 0.25;
@@ -67,7 +74,7 @@ function updateClosedScale(mapEl, scaleEl) {
     mapEl.style.setProperty('--map-closed-scale', scale.toFixed(4));
 }
 
-function initMap(guest) {
+function initMap(guest, houseCup) {
     const mapEl = document.querySelector('[data-map]');
     const scaleEl = document.querySelector('[data-map-scale]');
     const openButton = document.querySelector('[data-map-open]');
@@ -78,15 +85,14 @@ function initMap(guest) {
 
     updateClosedScale(mapEl, scaleEl);
     const footsteps = initMapFootsteps(mapEl);
-    const houseCup = initMapHouseCup(guest);
     // Set up below, once openMap exists.
     let finale = null;
     const rewards = createEggRewards(guest, {
         onStandings: (points, foundCount) => houseCup?.update(points, foundCount),
         cup: houseCup,
-        onAllFound: () => void finale?.play()
+        onAllFound: (result) => void finale?.play(result)
     });
-    initMapEasterEggs(mapEl, { footsteps, guestName: guest?.guestName, onFound: rewards.found, isFound: rewards.hasFound });
+    initMapEasterEggs(mapEl, { footsteps, onFound: rewards.found, isFound: rewards.hasFound });
     const mapReveal = initMapReveal({ isFound: () => rewards.hasFound('revelio') });
     preloadMapSounds();
     window.addEventListener('resize', () => updateClosedScale(mapEl, scaleEl));
@@ -144,7 +150,7 @@ function initMap(guest) {
     };
 
     openButton?.addEventListener('click', openMap);
-    finale = initMapFinale(guest, { mapEl, openMap });
+    finale = initMapFinale(guest, { mapEl, openMap, cup: houseCup, onNote: (result) => rewards.allFound(result) });
 
     const closeButton = document.querySelector('[data-map-close]');
 
@@ -240,7 +246,7 @@ async function renderGuestFeast(guest) {
     const guestNameEl = document.querySelector('[data-map-guest-name]');
     const guestHouseEl = document.querySelector('[data-map-guest-house]');
     const dishesEl = document.querySelector('[data-map-dishes]');
-    const { guestName, house, dishIds = [] } = guest ?? {};
+    const { guestName, house, dishIds = [], customDish = null } = guest ?? {};
 
     if (guestNameEl instanceof HTMLElement) {
         guestNameEl.textContent = guestName || 'Guest';
@@ -265,6 +271,10 @@ async function renderGuestFeast(guest) {
         .filter((dishId) => dishIndex.has(dishId))
         .sort((a, b) => catalogOrder.indexOf(a) - catalogOrder.indexOf(b))
         .map((dishId) => dishIndex.get(dishId));
+
+    if (customDish) {
+        selectedDishes.push({ course: customDish.course, name: customDish.name });
+    }
 
     dishesEl.replaceChildren();
 
@@ -334,9 +344,6 @@ function initLeaveButtons() {
 function renderDeclinedView(guest) {
     document.querySelectorAll('[data-map-view]').forEach((el) => el.classList.add('hidden'));
 
-    const loaderEl = document.querySelector(SCREEN_LOADER_SELECTOR);
-    loaderEl?.addEventListener('animationend', () => loaderEl.remove(), { once: true });
-
     const nameEl = document.querySelector('[data-map-declined-name]');
     const noteEl = document.querySelector('[data-map-declined-note]');
 
@@ -352,10 +359,21 @@ function renderDeclinedView(guest) {
     }
 
     if (guest.canChange) {
-        showElement(document.querySelector('[data-map-declined-change]'), 'inline-flex');
+        showElement(document.querySelector('[data-map-declined-change]'), 'flex');
     }
 
     showElement(document.querySelector('[data-map-declined]'), 'flex');
+
+    // The letter writes itself once the loader has swiped away, like /invite after the envelope.
+    initScreenLoader(() => window.dispatchEvent(new CustomEvent('reveal-sequence:start')));
+
+    setupLinkExitTransition({
+        linkSelector: '[data-map-declined-change-link]',
+        getDelayMs: () => runRevealExitSequence({
+            fadeDurationMs: DECLINED_EXIT_FADE_DURATION_MS,
+            getDelayMs: getDeclinedExitDelayMs
+        })
+    });
 }
 
 async function bootstrapMapPage() {
@@ -367,13 +385,15 @@ async function bootstrapMapPage() {
 
     await whenDomReady();
     initLeaveButtons();
+    // For every guest, also declined ones (they get a notice instead of a house).
+    const houseCup = initHouseCup(guest);
 
     if (guest.rsvpStatus === 'declined') {
         renderDeclinedView(guest);
         return;
     }
 
-    initMap(guest);
+    initMap(guest, houseCup);
     renderEventDetails(guest);
     renderChangeControls(guest);
     renderGuestFeast(guest).catch((error) => console.warn('Could not render the guest feast.', error));

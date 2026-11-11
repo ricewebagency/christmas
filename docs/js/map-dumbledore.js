@@ -1,19 +1,20 @@
 // Dumbledore's voice lines for the easter egg rewards, with subtitles (assets/files/dumbledore-subtitles.json).
 // Which line plays:
-// - Revelio: always its own line (followed by 'all-found' when it's the last one);
-// - the first egg a guest finds: 'first-find'; the last one: 'all-found', which starts the finale (map-finale.js);
+// - Revelio: always its own line (followed by 'more-secrets' when it's the first, 'all-found' when it's the last one);
+// - the first egg a guest finds: only 'more-secrets'; the last one: 'all-found', which starts the finale (map-finale.js);
 // - the second: 'Ten points to <house>!', right after he told them points are to be earned;
 // - in between: either the line about that egg, or a general one the guest hasn't heard yet
 //   ('Ten points to <house>!' takes turns with the general ones).
-// After the first find, a follow-up tells the guest how many secrets there are.
 // Plain <audio>, so the global mute toggle silences him too; the subtitles show either way.
 // iOS ignores <audio>.volume, so the voice runs through a Web Audio gain node when the audio context is
 // running (unlocked on the first tap); otherwise it falls back to the element's volume.
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js?v=fd0efeab0f';
+import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js?v=815a25f504';
 
 const AUDIO_DIR = new URL('../assets/music/dumbledore/', import.meta.url);
 const SUBTITLES_URL = new URL('../assets/files/dumbledore-subtitles.json', import.meta.url);
 const EGG_LINES = { compass: 'compass', footsteps: 'footsteps', castle: 'castle', snow: 'snow', nox: 'nox', revelio: 'revelio' };
+// Revelio as the very first find: the short version (the pudding line follows in 'revelio' otherwise).
+const REVELIO_FIRST_FIND = 'well-cast';
 // 'mischief' has no line of its own; it gets a general one.
 const GENERAL_LINES = ['well-spotted', 'remarkable', 'quite-forgotten', 'look-closely'];
 // Stands for the guest's own 'ten-points-to-<house>' line in the rotation (and in localStorage).
@@ -21,6 +22,8 @@ const TEN_POINTS = 'ten-points';
 const HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
 const tenPointsLine = (house) => `ten-points-to-${house}`;
 const FIRST_FIND_FOLLOW_UP = 'more-secrets';
+// Said before the Sorting Hat's points, as the reason for them.
+const SORTING_WELCOME = 'A new member deserves a proper welcome';
 // Incantations for Nox / Lumos (speakSpell), named after what he says.
 const SPELL_LINES = {
     lumos: [
@@ -55,6 +58,12 @@ let audioContext = null;
 let lastGeneralLine = null;
 const lastSpellLines = {};
 let spellVoice = null;
+// The line speakLines is playing; a newer sequence stops it.
+let lineVoice = null;
+// Ducking is shared: the music only comes back once nobody is speaking any more.
+let duckCount = 0;
+let musicVolumeBeforeDuck = null;
+let rampToken = 0;
 
 function getAudioContext() {
     const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
@@ -171,30 +180,60 @@ async function showSubtitles(sentences, token, { lingerMs = LINGER_MS, hide = tr
     }
 }
 
-function rampVolume(audio, target, durationMs) {
+// Only the newest ramp runs, so ducking and restoring never fight over the volume. onDone runs if it completes.
+function rampVolume(audio, target, durationMs, onDone = () => {}) {
+    const token = ++rampToken;
     const from = audio.volume;
     const startTime = performance.now();
     const step = (now) => {
+        if (token !== rampToken) {
+            return;
+        }
+
         const progress = Math.min(1, (now - startTime) / durationMs);
         audio.volume = Math.min(1, Math.max(0, from + (target - from) * progress));
         if (progress < 1) {
             requestAnimationFrame(step);
+        } else {
+            onDone();
         }
     };
     requestAnimationFrame(step);
 }
 
-// Lowers the background music; returns a function that brings it back.
+// Lowers the background music; returns a function that brings it back (once every speaker is done).
 function duckMusic() {
     const music = document.getElementById('background-audio');
 
-    if (!(music instanceof HTMLMediaElement) || music.paused || music.volume <= DUCKED_MUSIC_VOLUME) {
+    if (!(music instanceof HTMLMediaElement)) {
         return () => {};
     }
 
-    const original = music.volume;
-    rampVolume(music, DUCKED_MUSIC_VOLUME, DUCK_MS);
-    return () => rampVolume(music, original, DUCK_MS * 2);
+    if (duckCount === 0) {
+        // Still set while the music is coming back from an earlier duck: that's the volume to return to.
+        if (musicVolumeBeforeDuck === null && (music.paused || music.volume <= DUCKED_MUSIC_VOLUME)) {
+            return () => {};
+        }
+
+        musicVolumeBeforeDuck ??= music.volume;
+        rampVolume(music, DUCKED_MUSIC_VOLUME, DUCK_MS);
+    }
+
+    duckCount += 1;
+    let released = false;
+    return () => {
+        if (released) {
+            return;
+        }
+
+        released = true;
+        duckCount -= 1;
+        if (duckCount === 0) {
+            rampVolume(music, musicVolumeBeforeDuck, DUCK_MS * 2, () => {
+                musicVolumeBeforeDuck = null;
+            });
+        }
+    };
 }
 
 function readHeard(rotation) {
@@ -215,15 +254,16 @@ function pickLine(eggId, foundCount, totalEggs, house) {
 
     // Revelio reveals the party details, so it always gets its own line.
     if (eggId === 'revelio') {
-        return 'revelio';
+        return foundCount <= 1 ? REVELIO_FIRST_FIND : EGG_LINES.revelio;
     }
 
     if (foundCount >= totalEggs) {
         return 'all-found';
     }
 
+    // The follow-up alone; it already tells the guest they found a secret.
     if (foundCount <= 1) {
-        return 'first-find';
+        return FIRST_FIND_FOLLOW_UP;
     }
 
     // Counts as heard, so the rotation doesn't bring it straight back.
@@ -258,7 +298,7 @@ export function preloadDumbledore(house) {
     unlockAudioContextOnGesture();
     const tenPoints = HOUSES.includes(house) ? [tenPointsLine(house)] : [];
     const spellLines = Object.values(SPELL_LINES).flat();
-    ['first-find', 'all-found', ...Object.values(EGG_LINES), ...GENERAL_LINES, ...tenPoints, FIRST_FIND_FOLLOW_UP, ...spellLines].forEach((lineId) => {
+    ['all-found', ...Object.values(EGG_LINES), REVELIO_FIRST_FIND, ...GENERAL_LINES, ...tenPoints, FIRST_FIND_FOLLOW_UP, ...spellLines].forEach((lineId) => {
         const audio = new Audio(new URL(`${lineId}.mp3`, AUDIO_DIR).href);
         audio.preload = 'auto';
     });
@@ -313,7 +353,7 @@ export function speakSpell(spell) {
 }
 
 // Plays the lines one after another. The subtitle timings drive the sequence, so a follow-up still
-// shows its subtitles when the audio is blocked or missing.
+// shows its subtitles when the audio is blocked or missing. A newer sequence cuts off the line still playing.
 async function speakLines(parts, token, onLastSentence) {
     for (const [index, part] of parts.entries()) {
         if (index > 0) {
@@ -324,7 +364,10 @@ async function speakLines(parts, token, onLastSentence) {
             return;
         }
 
-        playLine(part.lineId);
+        if (lineVoice) {
+            stopLine(lineVoice);
+        }
+        lineVoice = playLine(part.lineId);
         await showSubtitles(part.sentences, token, index < parts.length - 1 ? { lingerMs: 0, hide: false } : { onLastSentence });
     }
 }
@@ -337,12 +380,32 @@ export async function showSubtitlesFor(lineId) {
     await showSubtitles(sentences, token);
 }
 
+// The Sorting Hat's points for being sorted: a welcome, then "Ten points to <house>!", with subtitles.
+// onTenPoints runs as "Ten points…" appears (not when the subtitles are missing or he gets cut off).
+// Resolves once he is done, or right away for an unknown house.
+export async function speakTenPoints(house, { onTenPoints = null } = {}) {
+    if (!HOUSES.includes(house)) {
+        return;
+    }
+
+    const subtitles = await loadSubtitles();
+    const parts = [SORTING_WELCOME, tenPointsLine(house)].map((lineId) => ({ lineId, sentences: subtitles.get(lineId) ?? [] }));
+    const token = ++speechToken;
+    const restoreMusic = duckMusic();
+
+    try {
+        await speakLines(parts, token, onTenPoints);
+    } finally {
+        restoreMusic();
+    }
+}
+
 // Plays the right line for this find. Resolves (with how long he speaks, in ms) once it has started,
 // so the caller can keep the banner up for as long as he talks. onLastSentence runs as his last sentence appears
 // (for the last secret: "Mischief managed!"); not at all when the subtitles are missing or he gets cut off.
 export async function speakForEgg({ eggId, foundCount, totalEggs, house }, { onLastSentence = null } = {}) {
     const lineId = pickLine(eggId, foundCount, totalEggs, house);
-    const followUp = foundCount <= 1 && foundCount < totalEggs ? FIRST_FIND_FOLLOW_UP : undefined;
+    const followUp = foundCount <= 1 && foundCount < totalEggs && lineId !== FIRST_FIND_FOLLOW_UP ? FIRST_FIND_FOLLOW_UP : undefined;
     // Revelio keeps its own line, so when it's the last secret, the all-found line follows it.
     const allFound = foundCount >= totalEggs && lineId !== 'all-found' ? 'all-found' : undefined;
     const subtitles = await loadSubtitles();

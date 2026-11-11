@@ -7,18 +7,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Christmas at the Great Hall | RSVP</title>
     <link rel="icon" href="./favicon.ico">
-    <link rel="stylesheet" href="./css/main.css?v=fd0efeab0f">
-    <script src="./js/audio-toggle.js?v=fd0efeab0f"></script>
-    <script src="./js/reveal-sequence.js?v=fd0efeab0f" defer></script>
-    <script src="./js/smooth-scroll.js?v=fd0efeab0f" defer></script>
-    <script src="./js/background-audio.js?v=fd0efeab0f" defer></script>
-    <script type="module" src="./js/rsvp-form.js?v=fd0efeab0f"></script>
+    <link rel="stylesheet" href="./css/main.css?v=815a25f504">
+    <script src="./js/audio-toggle.js?v=815a25f504"></script>
+    <script src="./js/reveal-sequence.js?v=815a25f504" defer></script>
+    <script src="./js/smooth-scroll.js?v=815a25f504" defer></script>
+    <script src="./js/background-audio.js?v=815a25f504" defer></script>
+    <script type="module" src="./js/rsvp-form.js?v=815a25f504"></script>
 </head>
 
-<body data-reveal-order="random" class="relative min-h-dvh overflow-x-hidden bg-neutral-950 font-serif text-amber-50 antialiased" data-asset-base-path="../">
+<body class="relative min-h-dvh overflow-x-hidden bg-neutral-950 font-serif text-amber-50 antialiased" data-asset-base-path="../">
     <audio id="background-audio" preload="auto" loop autoplay>
         <source src="./assets/music/hedwigs-song.mp3" type="audio/mp3">
     </audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-1.mp3"></audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-2.mp3"></audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-3.mp3"></audio>
+    <audio data-reveal-sound preload="auto" src="./assets/music/invite/paper-writing-4.mp3"></audio>
+    <audio data-owl-hoot preload="auto" src="./assets/music/rsvp/owl-hoot.mp3"></audio>
     <div aria-hidden="true"
         class="pointer-events-none absolute inset-0 z-0 bg-[url('../assets/images/burnt-paper.png')] bg-cover bg-center bg-no-repeat opacity-100">
     </div>
@@ -26,46 +31,43 @@
     <main class="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
         <section id="rsvp-root"
             class="relative z-10 w-full max-w-xl p-5 text-charcoal transition duration-700 ease-out motion-reduce:transform-none motion-reduce:transition-none sm:p-8 font-inkpot">
-            <p data-reveal style="--reveal-delay: 400ms;"
+            <p data-reveal style="--reveal-delay: 300ms;"
                 class="mt-8 text-left text-xl italic text-charcoal sm:text-2xl">
-                Dear Headmistress,
+                "Dear Headmistress,
             </p>
             <div class="mt-8 space-y-5 text-left text-sm leading-relaxed tracking-wide text-charcoal/90 sm:text-base">
+                <p data-reveal style="--reveal-delay: 700ms;">
+                    Thank you for the invitation to Christmas at the Great Hall on 24 December at 18:00.
+                </p>
                 <p data-reveal style="--reveal-delay: 1100ms;">
-                    Thank you for your letter and invitation to Christmas at the Great Hall on December 24th at 18:00.
+                    My answer is:
                 </p>
-                <p data-reveal style="--reveal-delay: 1700ms;">
-                    Via this letter, I wish to let you know that my choice to attend has been made.
-                </p>
-                <p data-reveal style="--reveal-delay: 2300ms;">
-                    My answer to your invitation is:
-                </p>
-                <form data-reveal data-reveal-last style="--reveal-delay: 2900ms;" class="pt-1 space-y-4">
-                    <div class="flex items-center gap-12 pt-1 pl-4 text-left text-lg sm:text-xl">
-                        <button type="button" data-attendance-choice="accepted"
-                            class="attendance-choice appearance-none border-0 bg-transparent p-0 text-charcoal/85 opacity-45 transition-opacity duration-200 hover:opacity-100 focus:opacity-100 focus-visible:text-black focus:text-black active:text-black focus:outline-none focus-visible:outline-none">
+                <form data-reveal data-reveal-last style="--reveal-delay: 1500ms;" class="pt-1 space-y-4">
+                    <div class="flex items-center justify-start gap-8 pt-1 sm:gap-12">
+                        <button type="button" data-attendance-choice="accepted" data-pop="medium" aria-pressed="false"
+                            class="attendance-choice inline-flex items-center justify-center bg-transparent px-0 py-1 text-2xl text-charcoal/85 decoration-2 underline-offset-4 opacity-60 transition duration-200 hover:opacity-100 focus:outline-none focus-visible:opacity-100 aria-pressed:text-black aria-pressed:underline aria-pressed:opacity-100 sm:text-3xl">
                             Yes
                         </button>
-                        <button type="button" data-attendance-choice="declined"
-                            class="attendance-choice appearance-none border-0 bg-transparent p-0 text-charcoal/85 opacity-45 transition-opacity duration-200 hover:opacity-100 focus:opacity-100 focus-visible:text-black focus:text-black active:text-black focus:outline-none focus-visible:outline-none">
+                        <button type="button" data-attendance-choice="declined" data-pop="medium" aria-pressed="false"
+                            class="attendance-choice inline-flex items-center justify-center bg-transparent px-0 py-1 text-2xl text-charcoal/85 decoration-2 underline-offset-4 opacity-60 transition duration-200 hover:opacity-100 focus:outline-none focus-visible:opacity-100 aria-pressed:text-black aria-pressed:underline aria-pressed:opacity-100 sm:text-3xl">
                             No
                         </button>
                     </div>
                     <input type="hidden" name="attendanceResponse" id="attendance-response" value="">
                     <p data-rsvp-error role="alert" class="hidden text-sm italic text-red-900"></p>
-                    <div class="flex justify-end pt-1 text-left">
-                        <button type="submit"
-                            class="group inline-flex items-center gap-2 text-sm text-charcoal/85 transition-colors duration-200 hover:text-charcoal focus:outline-none focus-visible:outline-none sm:text-base">
-                            <span>Send letter via owl →</span>
+                    <div class="flex justify-start pt-4">
+                        <button type="submit" data-rsvp-submit data-pop="high"
+                            class="group inline-flex items-center gap-3 bg-transparent text-lg italic tracking-wide text-charcoal opacity-50 transition duration-200 hover:opacity-80 focus:outline-none sm:text-xl">
+                            <span class="underline decoration-1 underline-offset-4">Send letter</span>
+                            <span aria-hidden="true" class="size-5 transition-transform duration-200 group-hover:translate-x-1">→</span>
                         </button>
                     </div>
                 </form>
                 <div class="pt-2">
-                    <p data-reveal style="--reveal-delay: 3400ms;" class="mt-2 text-base italic text-charcoal">Yours
+                    <p data-reveal style="--reveal-delay: 1900ms;" class="mt-2 text-base italic text-charcoal">Yours
                         sincerely,</p>
-                    <div data-reveal style="--reveal-delay: 3900ms;" class="mt-6">
-                        <p class="text-left text-xl italic text-charcoal sm:text-2xl"><span id="guest-name">Guest</span>
-                        </p>
+                    <div data-reveal style="--reveal-delay: 2300ms;" class="mt-6">
+                        <p class="text-left text-xl italic text-charcoal sm:text-2xl"><span id="guest-name">Guest</span>"</p>
                     </div>
                 </div>
             </div>

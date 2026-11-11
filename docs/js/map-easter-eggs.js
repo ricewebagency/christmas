@@ -11,10 +11,10 @@
 // secret mode, desktops), the tap and swipe gestures do the same.
 // Each egg reports itself through `onFound(eggId, { point, delayMs })` (map-rewards.js turns that into house points).
 // Egg ids must match EasterEggs.All in the API.
-import { fetchGuestNames } from './api-client.js?v=fd0efeab0f';
-import { speakSpell } from './map-dumbledore.js?v=fd0efeab0f';
-import { centerOf } from './map-rewards.js?v=fd0efeab0f';
-import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=fd0efeab0f';
+import { fetchGuestNames } from './api-client.js?v=815a25f504';
+import { speakSpell } from './map-dumbledore.js?v=815a25f504';
+import { centerOf } from './map-rewards.js?v=815a25f504';
+import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=815a25f504';
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const random = (min, max) => min + Math.random() * (max - min);
@@ -105,8 +105,7 @@ function initCompass(mapEl, onFound) {
 // Footstep names
 // ---------------------------------------------------------------------------------------------
 
-// Hogwarts folk who could turn up on the map. They fill the name list up to NAME_POOL_SIZE,
-// and always mix in with the guests (at least MIN_HOGWARTS_NAMES of them).
+// Hogwarts folk who turn up on the map once every guest has been named.
 const HOGWARTS_NAMES = [
     'Harry Potter', 'Ron Weasley', 'Hermione Granger', 'Albus Dumbledore', 'Minerva McGonagall', 'Severus Snape',
     'Rubeus Hagrid', 'Argus Filch', 'Mrs Norris', 'Peeves', 'Nearly Headless Nick', 'Moaning Myrtle',
@@ -115,8 +114,6 @@ const HOGWARTS_NAMES = [
     'Ginny Weasley', 'Fred Weasley', 'George Weasley', 'Draco Malfoy', 'Cho Chang', 'Cedric Diggory',
     'Filius Flitwick', 'Pomona Sprout', 'Horace Slughorn', 'Sybill Trelawney', 'Poppy Pomfrey', 'Oliver Wood'
 ];
-const NAME_POOL_SIZE = 25;
-const MIN_HOGWARTS_NAMES = 8;
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 500;
 
@@ -206,25 +203,18 @@ function createNameTag(name, tagIndex = null) {
     return { name, tagIndex: index, el: svg };
 }
 
-function initFootstepNames(mapEl, footsteps, guestName, onFound) {
+function initFootstepNames(mapEl, footsteps, onFound) {
     const sheetEl = mapEl.querySelector('[data-map-sheet]');
 
     if (!sheetEl || !footsteps) {
         return;
     }
 
-    // The guest themself, the other guests who are coming (API, loaded once in the background),
-    // topped up with Hogwarts names. Until the API answers (or when it fails) it's mostly Hogwarts.
-    const ownName = String(guestName ?? '').trim();
-    const hogwartsNames = [...HOGWARTS_NAMES].sort(() => Math.random() - 0.5);
-    const buildPool = (guestNames) => {
-        const people = [...new Set([ownName, ...guestNames].filter(Boolean))];
-        const hogwartsCount = Math.max(MIN_HOGWARTS_NAMES, NAME_POOL_SIZE - people.length);
-        return [...new Set([...people, ...hogwartsNames.slice(0, hogwartsCount)])];
-    };
-    let pool = buildPool([]);
+    // The other guests who are coming (API, loaded once in the background; never the guest themself).
+    // Until the API answers (or when it fails) only Hogwarts names are left.
+    let guestNames = [];
     fetchGuestNames().then((names) => {
-        pool = buildPool(Array.isArray(names) ? names : []);
+        guestNames = [...new Set(Array.isArray(names) ? names : [])];
     }, () => {});
     // Measuring names needs the Inkpot font, and the first banner shouldn't pop in late.
     document.fonts?.load(`${TAG_FONT_PX}px Inkpot`).catch(() => {});
@@ -232,23 +222,20 @@ function initFootstepNames(mapEl, footsteps, guestName, onFound) {
         new Image().src = src;
     });
 
-    // Every name is shown once (random order) before the cycle starts over; never the same name twice in a row,
-    // and never a name that is already on screen.
+    // Each cycle shows every guest first (random order), only then the Hogwarts names; once all are shown
+    // the cycle starts over. Never the same name twice in a row, and never a name that is already on screen.
     const shownThisCycle = new Set();
     let lastName = null;
     const pickName = (usedNames) => {
-        const isFree = (name) => !usedNames.has(name) && name !== lastName;
-        let candidates = pool.filter((name) => isFree(name) && !shownThisCycle.has(name));
-
-        if (!candidates.length && pool.every((name) => shownThisCycle.has(name))) {
+        const allNames = [...guestNames, ...HOGWARTS_NAMES];
+        if (allNames.every((name) => shownThisCycle.has(name))) {
             shownThisCycle.clear();
-            candidates = pool.filter(isFree);
-        }
-        if (!candidates.length) {
-            candidates = pool.filter(isFree);
         }
 
-        const name = candidates[Math.floor(Math.random() * candidates.length)] ?? pool[0];
+        const isFree = (name) => !usedNames.has(name) && name !== lastName;
+        const fresh = (names) => names.filter((name) => isFree(name) && !shownThisCycle.has(name));
+        const candidates = [fresh(guestNames), fresh(HOGWARTS_NAMES), allNames.filter(isFree)].find((names) => names.length) ?? [];
+        const name = candidates[Math.floor(Math.random() * candidates.length)] ?? HOGWARTS_NAMES[0];
         shownThisCycle.add(name);
         lastName = name;
         return name;
@@ -930,9 +917,9 @@ function initSpells(mapEl, onFound) {
     }, true);
 }
 
-export function initMapEasterEggs(mapEl, { footsteps, guestName, onFound = () => {}, isFound = () => false } = {}) {
+export function initMapEasterEggs(mapEl, { footsteps, onFound = () => {}, isFound = () => false } = {}) {
     initCompass(mapEl, onFound);
-    initFootstepNames(mapEl, footsteps, guestName, onFound);
+    initFootstepNames(mapEl, footsteps, onFound);
     initCastle(mapEl, onFound);
     initSnow(mapEl, onFound, isFound);
     initNoxLumos(mapEl, onFound);

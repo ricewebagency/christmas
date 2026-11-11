@@ -60,7 +60,7 @@
 
     <div data-parchment-container
         class="pointer-events-none fixed inset-0 z-[6] hidden items-center justify-center opacity-0">
-        <div class="relative w-[min(98vw,70rem)] animate-fadeIn1800">
+        <div class="relative w-[min(125vw,76dvh)] max-[361px]:w-[min(130vw,80dvh)] sm:w-[min(98vw,70rem,76dvh)] animate-fadeIn1800">
             <img src="./assets/images/parchment.png" alt=""
                 class="relative left-[-3%] h-auto w-[106%] max-w-none drop-shadow-[0_1.5rem_1.5rem_rgba(0,0,0,0.35)]">
 
@@ -74,17 +74,16 @@
                         </p>
 
                         <p data-reveal class="text-sm leading-relaxed sm:text-base" style="--reveal-delay: 2000ms;">
-                            As is customary for the Christmas Feast, each attendee is kindly requested to contribute at
-                            least one dish, though additional dishes are most warmly welcomed.
+                            The house-elves are terribly busy. Please help them and bring a dish. Two is even better!
                         </p>
 
                         <p data-reveal class="text-sm leading-relaxed sm:text-base" style="--reveal-delay: 3000ms;">
-                            Make your selection on the next page. You may find certain dishes have already
-                            been claimed by others. These can therefore no longer be selected.
+                            Pick yours on the next page. Dishes already claimed can't be chosen.
+                            <span data-custom-dish-intro class="hidden">Not on the menu? Add your own on the last page.</span>
                         </p>
                     </div>
 
-                    <button type="button" data-dish-intro
+                    <button type="button" data-dish-intro data-pop="high"
                         class="group pointer-events-auto self-end inline-flex items-center gap-2 text-left text-sm leading-none opacity-0 transition-colors duration-200 hover:text-[#0f0d0b] focus:outline-none focus-visible:outline-none animate-fadeIn1800 sm:text-base"
                         style="animation-delay: 4000ms;">
                         <span>Select your dishes →</span>
@@ -104,34 +103,32 @@
                                 class="flex w-full transition-transform duration-500 ease-out"></div>
                         </div>
 
-                        <div class="flex items-center justify-between gap-3 pt-2 text-sm leading-none sm:text-base">
-                            <button type="button" data-dish-prev
-                                class="inline-flex items-center gap-2 text-[#1f1d1a]/85 transition-colors duration-200 hover:text-[#1f1d1a] disabled:cursor-not-allowed disabled:opacity-35 focus:outline-none focus-visible:outline-none"
+                        <div class="flex items-center justify-center gap-3 pt-1 leading-none">
+                            <button type="button" data-dish-prev data-pop="small"
+                                class="inline-flex h-8 w-8 items-center justify-center text-2xl text-[#1f1d1a]/85 transition-colors duration-200 hover:text-[#1f1d1a] disabled:cursor-not-allowed disabled:opacity-35 focus:outline-none focus-visible:outline-none"
                                 aria-label="Previous dishes page">
-                                <span aria-hidden="true">←</span>
-                                <span>Previous</span>
+                                <span aria-hidden="true">‹</span>
                             </button>
 
                             <div data-dish-dots class="flex items-center justify-center gap-2"></div>
 
-                            <button type="button" data-dish-next
-                                class="inline-flex items-center gap-2 text-[#1f1d1a]/85 transition-colors duration-200 hover:text-[#1f1d1a] disabled:cursor-not-allowed disabled:opacity-35 focus:outline-none focus-visible:outline-none"
+                            <button type="button" data-dish-next data-pop="small"
+                                class="inline-flex h-8 w-8 items-center justify-center text-2xl text-[#1f1d1a]/85 transition-colors duration-200 hover:text-[#1f1d1a] disabled:cursor-not-allowed disabled:opacity-35 focus:outline-none focus-visible:outline-none"
                                 aria-label="Next dishes page">
-                                <span>Next</span>
-                                <span aria-hidden="true">→</span>
+                                <span aria-hidden="true">›</span>
                             </button>
                         </div>
                     </div>
 
                     <div class="w-full space-y-3 text-sm leading-none sm:text-base">
                         <div class="flex items-center justify-between gap-3">
-                            <button type="button" data-dish-back
+                            <button type="button" data-dish-back data-pop="small"
                                 class="pointer-events-auto inline-flex items-center gap-2 text-[#1f1d1a]/85 transition-colors duration-200 hover:text-[#1f1d1a] focus:outline-none focus-visible:outline-none">
                                 <span aria-hidden="true">←</span>
                                 <span>Go back</span>
                             </button>
 
-                            <button type="button" data-dish-confirm
+                            <button type="button" data-dish-confirm data-pop="high"
                                 class="group pointer-events-auto inline-flex items-center gap-2 transition-colors duration-200 hover:text-[#0f0d0b] focus:outline-none focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35">
                                 <span>Confirm selection</span>
                                 <span aria-hidden="true">→</span>

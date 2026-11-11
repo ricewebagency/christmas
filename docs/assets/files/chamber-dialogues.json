@@ -6,19 +6,8 @@
       "dialogues": [
         {
           "id": 1,
-          "text": "Wow! You encounter the Basilisk upon entering. Quickly, draw your wand!",
-          "readMore": "Click to draw 💥"
-        }
-      ]
-    },
-    {
-      "groupId": 2,
-      "groupName": "casting spells",
-      "dialogues": [
-        {
-          "id": 4,
-          "text": "You raise your wand and concentrate. Click your wand to cast your spell!",
-          "readMore": "Ready? 🪄"
+          "text": "Wow! You encounter the Basilisk upon entering. Quickly, draw your wand and click it to cast your spell!",
+          "readMore": "Draw your wand 🪄"
         }
       ]
     },
@@ -28,12 +17,7 @@
       "dialogues": [
         {
           "id": 6,
-          "text": "The Basilisk is badly hurt!",
-          "readMore": "Click to continue..."
-        },
-        {
-          "id": 7,
-          "text": "Quickly, click your wand again and defeat the Basilisk!",
+          "text": "The Basilisk is badly hurt! Quickly, click your wand again and defeat it!",
           "readMore": "Ready? 🪄"
         }
       ]
@@ -44,12 +28,7 @@
       "dialogues": [
         {
           "id": 8,
-          "text": "Well done! Your spell has worked perfectly.",
-          "readMore": "Click to continue..."
-        },
-        {
-          "id": 9,
-          "text": "An ethereal light shines through the Chamber of Secrets.",
+          "text": "Well done! Your spell has worked perfectly. An ethereal light shines through the Chamber of Secrets.",
           "readMore": "Click to continue..."
         }
       ]
@@ -82,23 +61,7 @@
       "dialogues": [
         {
           "id": 12,
-          "text": "It seems to be a scroll, I wonder what it says..",
-          "readMore": "Click to continue..."
-        }
-      ]
-    },
-    {
-      "groupId": 8,
-      "groupName": "marauders map",
-      "dialogues": [
-        {
-          "id": 14,
-          "text": "\"Messrs. Moony, Wormtail, Padfoot and Prongs are proud to present the Marauder's Map.\"",
-          "readMore": "Click to continue..."
-        },
-        {
-          "id": 15,
-          "text": "Mmm, I wonder what that means..",
+          "text": "It seems to be a map! Let's take it to your study and read it.",
           "readMore": "Continue to Marauder's Map →"
         }
       ]

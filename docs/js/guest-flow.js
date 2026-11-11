@@ -1,4 +1,4 @@
-import { clearGuestCode, getGuest, getStoredGuestCode, isApiError } from './api-client.js?v=fd0efeab0f';
+import { clearGuestCode, getGuest, getStoredGuestCode, isApiError } from './api-client.js?v=815a25f504';
 
 // Relative to the site root; every built page has <base href> pointing there.
 const PAGE_PATHS = {
@@ -48,7 +48,7 @@ function hasHouse(guest) {
 }
 
 function hasDishes(guest) {
-    return Array.isArray(guest?.dishIds) && guest.dishIds.length > 0;
+    return (Array.isArray(guest?.dishIds) && guest.dishIds.length > 0) || Boolean(guest?.customDish);
 }
 
 export function getNextStep(guest) {

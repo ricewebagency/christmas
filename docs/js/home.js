@@ -4,10 +4,10 @@ import {
     readGuestCodeFromUrl,
     removeGuestCodeFromUrl,
     verifyGuestCode
-} from './api-client.js?v=fd0efeab0f';
-import { getNextStep, redirectToPage } from './guest-flow.js?v=fd0efeab0f';
-import { getPinErrorKind } from './pin-dialog.js?v=fd0efeab0f';
-import { removeCookie, removeLocalStorageItem } from './storage-utils.js?v=fd0efeab0f';
+} from './api-client.js?v=815a25f504';
+import { getNextStep, redirectToPage } from './guest-flow.js?v=815a25f504';
+import { getPinErrorKind } from './pin-dialog.js?v=815a25f504';
+import { removeCookie, removeLocalStorageItem } from './storage-utils.js?v=815a25f504';
 
 const LEGACY_LOCAL_STORAGE_KEYS = [
     'magical-winter-banquet.cabin',

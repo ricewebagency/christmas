@@ -48,7 +48,7 @@ function hasHouse(guest) {
 }
 
 function hasDishes(guest) {
-    return Array.isArray(guest?.dishIds) && guest.dishIds.length > 0;
+    return (Array.isArray(guest?.dishIds) && guest.dishIds.length > 0) || Boolean(guest?.customDish);
 }
 
 export function getNextStep(guest) {
