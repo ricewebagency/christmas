@@ -3,22 +3,21 @@ import {
     pathEndsWith,
     runRevealExitSequence,
     setupLinkExitTransition
-} from "./page-transitions.js?v=815a25f504";
+} from "./page-transitions.js?v=8a8d7781f5";
 import {
     clearGuestCode,
     getStoredGuestCode,
     readGuestCodeFromUrl,
     removeGuestCodeFromUrl,
     verifyGuestCode
-} from "./api-client.js?v=815a25f504";
-import { getNextStep, getPageName, getPageUrl, whenDomReady } from "./guest-flow.js?v=815a25f504";
-import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js?v=815a25f504";
-import "./click-pop.js?v=815a25f504";
+} from "./api-client.js?v=8a8d7781f5";
+import { getNextStep, getPageName, getPageUrl, redirectToPage, whenDomReady } from "./guest-flow.js?v=8a8d7781f5";
+import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js?v=8a8d7781f5";
+import "./click-pop.js?v=8a8d7781f5";
 
-const RSVP_LABELS = {
-    pending: "Awaiting your response",
-    accepted: "Owl received - attendance confirmed",
-    declined: "Owl received - regrets noted"
+// The pending text stays in the HTML.
+const REPLY_TEXTS = {
+    accepted: "Your owl has arrived — we are delighted you will join us at the feast."
 };
 
 const INVITE_LOADER_TIMINGS = {
@@ -91,7 +90,6 @@ function formatCountdown(parts) {
 function renderInvitationData(data) {
     const guestNameEl = document.getElementById("guest-name");
     const eventLocationEl = document.getElementById("event-location");
-    const rsvpStatusEl = document.getElementById("rsvp-status");
 
     if (guestNameEl) {
         guestNameEl.textContent = data.guestName;
@@ -100,10 +98,6 @@ function renderInvitationData(data) {
     // Keep the default in the HTML when the API has no location.
     if (eventLocationEl && data.location) {
         eventLocationEl.textContent = data.location;
-    }
-
-    if (rsvpStatusEl) {
-        rsvpStatusEl.textContent = RSVP_LABELS[data.rsvpStatus] || "Awaiting your response";
     }
 }
 
@@ -269,6 +263,13 @@ function setupInviteCta(guest) {
     // Only true before the guest replied.
     document.querySelector("[data-invite-followup]")?.classList.add("hidden");
 
+    const replyEl = document.querySelector("[data-invite-reply]");
+    const replyText = REPLY_TEXTS[guest.rsvpStatus];
+
+    if (replyEl && replyText) {
+        replyEl.textContent = replyText;
+    }
+
     const ctaLink = document.querySelector("[data-invite-cta]");
     const ctaLabel = document.querySelector("[data-invite-cta-label]");
     const nextStep = getNextStep(guest);
@@ -360,6 +361,16 @@ function fadeInGuestName(guest) {
     });
 }
 
+// A declined guest has nothing left to answer here; the map is their page.
+function redirectIfDeclined(guest) {
+    if (guest?.rsvpStatus !== "declined") {
+        return false;
+    }
+
+    redirectToPage("map");
+    return true;
+}
+
 async function initInvitePage(guestResultPromise) {
     const invitationRoot = document.getElementById("invitation-root");
     const mainEl = document.querySelector("main");
@@ -381,6 +392,10 @@ async function initInvitePage(guestResultPromise) {
         playInviteEnvelopeLoader()
     ]);
 
+    if (redirectIfDeclined(result.guest)) {
+        return;
+    }
+
     if (invitationRoot) {
         invitationRoot.classList.remove("opacity-0");
         invitationRoot.classList.add("opacity-100");
@@ -397,6 +412,10 @@ async function initInvitePage(guestResultPromise) {
     await new Promise((resolve) => window.setTimeout(resolve, PIN_DIALOG_DELAY_MS));
 
     const guest = await openPinDialog(result.dialog);
+
+    if (redirectIfDeclined(guest)) {
+        return;
+    }
 
     if (mainEl) {
         mainEl.inert = false;

@@ -74,6 +74,29 @@ function populateGuestName(guest) {
     }
 }
 
+// A guest who sent their regrets earlier writes to change that answer.
+const CHANGE_FROM_DECLINED_TEXTS = {
+    intro: 'Earlier I sent my regrets for Christmas at the Great Hall on 24 December at 18:00, but I would like to change my answer.',
+    answerLabel: 'My new answer is:'
+};
+
+function applyChangeTexts(guest) {
+    if (guest?.rsvpStatus !== 'declined') {
+        return;
+    }
+
+    const introEl = document.querySelector('[data-rsvp-intro]');
+    const answerLabelEl = document.querySelector('[data-rsvp-answer-label]');
+
+    if (introEl) {
+        introEl.textContent = CHANGE_FROM_DECLINED_TEXTS.intro;
+    }
+
+    if (answerLabelEl) {
+        answerLabelEl.textContent = CHANGE_FROM_DECLINED_TEXTS.answerLabel;
+    }
+}
+
 function toAttendanceStatus(value) {
     return ATTENDANCE_CHOICE_MAP[String(value ?? '').trim().toLowerCase()] ?? null;
 }
@@ -250,6 +273,7 @@ async function bootstrapRsvpPage() {
 
     await whenDomReady();
     populateGuestName(guest);
+    applyChangeTexts(guest);
     initDishSelectionLimit();
     initRsvpFormSubmission(guest);
 }

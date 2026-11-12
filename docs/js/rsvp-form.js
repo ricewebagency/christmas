@@ -1,7 +1,7 @@
-import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=815a25f504';
-import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=815a25f504';
-import { getRandomExitDelayMs } from './page-transitions.js?v=815a25f504';
-import './click-pop.js?v=815a25f504';
+import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=8a8d7781f5';
+import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=8a8d7781f5';
+import { getRandomExitDelayMs } from './page-transitions.js?v=8a8d7781f5';
+import './click-pop.js?v=8a8d7781f5';
 
 const ATTENDANCE_CHOICE_MAP = {
     yes: 'accepted',
@@ -71,6 +71,29 @@ function populateGuestName(guest) {
 
     if (guestNameEl && guest?.guestName) {
         guestNameEl.textContent = guest.guestName;
+    }
+}
+
+// A guest who sent their regrets earlier writes to change that answer.
+const CHANGE_FROM_DECLINED_TEXTS = {
+    intro: 'Earlier I sent my regrets for Christmas at the Great Hall on 24 December at 18:00, but I would like to change my answer.',
+    answerLabel: 'My new answer is:'
+};
+
+function applyChangeTexts(guest) {
+    if (guest?.rsvpStatus !== 'declined') {
+        return;
+    }
+
+    const introEl = document.querySelector('[data-rsvp-intro]');
+    const answerLabelEl = document.querySelector('[data-rsvp-answer-label]');
+
+    if (introEl) {
+        introEl.textContent = CHANGE_FROM_DECLINED_TEXTS.intro;
+    }
+
+    if (answerLabelEl) {
+        answerLabelEl.textContent = CHANGE_FROM_DECLINED_TEXTS.answerLabel;
     }
 }
 
@@ -250,6 +273,7 @@ async function bootstrapRsvpPage() {
 
     await whenDomReady();
     populateGuestName(guest);
+    applyChangeTexts(guest);
     initDishSelectionLimit();
     initRsvpFormSubmission(guest);
 }

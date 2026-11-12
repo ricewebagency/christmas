@@ -144,8 +144,6 @@ export function whenDomReady() {
 const DEADLINE_FORMAT = new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
     month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
     timeZone: 'Europe/Amsterdam'
 });
 

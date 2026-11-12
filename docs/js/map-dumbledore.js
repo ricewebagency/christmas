@@ -8,7 +8,7 @@
 // Plain <audio>, so the global mute toggle silences him too; the subtitles show either way.
 // iOS ignores <audio>.volume, so the voice runs through a Web Audio gain node when the audio context is
 // running (unlocked on the first tap); otherwise it falls back to the element's volume.
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js?v=815a25f504';
+import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js?v=8a8d7781f5';
 
 const AUDIO_DIR = new URL('../assets/music/dumbledore/', import.meta.url);
 const SUBTITLES_URL = new URL('../assets/files/dumbledore-subtitles.json', import.meta.url);

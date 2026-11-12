@@ -1,9 +1,9 @@
-import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js?v=815a25f504';
-import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=815a25f504';
-import { parseRevealDelayMs } from './page-transitions.js?v=815a25f504';
-import { createCustomDishPage, initCustomDishForm } from './custom-dish.js?v=815a25f504';
-import { initHouseCup } from './house-cup.js?v=815a25f504';
-import { playPop } from './click-pop.js?v=815a25f504';
+import { fetchDishCatalog, fetchTakenCabinDishIds, getCabinData, getGuest, isApiError, sendCabinDishSelection } from './api-client.js?v=8a8d7781f5';
+import { getNextStep, getPageUrl, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=8a8d7781f5';
+import { parseRevealDelayMs } from './page-transitions.js?v=8a8d7781f5';
+import { createCustomDishPage, initCustomDishForm } from './custom-dish.js?v=8a8d7781f5';
+import { initHouseCup } from './house-cup.js?v=8a8d7781f5';
+import { playPop } from './click-pop.js?v=8a8d7781f5';
 
 const DEFAULT_CABIN_IMAGE = './assets/images/hogwarts-express-cabin-front-gryffindor.png';
 const BACKDROP_SELECTOR = '[data-cabin-backdrop]';

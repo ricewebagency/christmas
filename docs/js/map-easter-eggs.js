@@ -11,10 +11,11 @@
 // secret mode, desktops), the tap and swipe gestures do the same.
 // Each egg reports itself through `onFound(eggId, { point, delayMs })` (map-rewards.js turns that into house points).
 // Egg ids must match EasterEggs.All in the API.
-import { fetchGuestNames } from './api-client.js?v=815a25f504';
-import { speakSpell } from './map-dumbledore.js?v=815a25f504';
-import { centerOf } from './map-rewards.js?v=815a25f504';
-import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=815a25f504';
+import { fetchGuestNames } from './api-client.js?v=8a8d7781f5';
+import { playPop } from './click-pop.js?v=8a8d7781f5';
+import { speakSpell } from './map-dumbledore.js?v=8a8d7781f5';
+import { centerOf } from './map-rewards.js?v=8a8d7781f5';
+import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=8a8d7781f5';
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const random = (min, max) => min + Math.random() * (max - min);
@@ -116,6 +117,9 @@ const HOGWARTS_NAMES = [
 ];
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 500;
+// A tap on the open map that finds nothing still bops (the same sound as an option button),
+// at most once per this gap so quick taps (the snow egg) don't rattle.
+const MISS_POP_MIN_GAP_MS = 150;
 
 // Banners cut from name-tags.png (fully opaque paper). Coordinates are in the cut-out file's pixels:
 // `path` runs along the middle of the writable band, `band` is how tall that band is.
@@ -241,12 +245,15 @@ function initFootstepNames(mapEl, footsteps, onFound) {
         return name;
     };
 
+    let lastMissPopAt = -Infinity;
+
     onPointerRelease(sheetEl, (down, event) => {
         if (!isMapOpen(mapEl)) {
             return;
         }
 
-        if (isTapGesture(down, event) && !(event.target instanceof Element && event.target.closest('a, button, [data-egg-compass], [data-egg-castle]'))) {
+        // Links and buttons pop themselves (click-pop.js); compass and castle have their own sounds.
+        if (isTapGesture(down, event) && !(event.target instanceof Element && event.target.closest('a, button, [data-pop], [data-egg-compass], [data-egg-castle]'))) {
             // A walker keeps the name (and banner) it got the first time it was tapped.
             const labelled = footsteps.labelNearest(event.clientX, event.clientY, (usedNames, known) => (known
                 ? createNameTag(known.name, known.tagIndex)
@@ -254,6 +261,9 @@ function initFootstepNames(mapEl, footsteps, onFound) {
 
             if (labelled) {
                 onFound('footsteps', { point: { x: event.clientX, y: event.clientY - 40 }, delayMs: 900 });
+            } else if (event.timeStamp - lastMissPopAt >= MISS_POP_MIN_GAP_MS) {
+                lastMissPopAt = event.timeStamp;
+                playPop('medium');
             }
         }
     });

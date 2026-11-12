@@ -1,6 +1,6 @@
-import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=815a25f504';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=815a25f504';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=815a25f504';
+import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=8a8d7781f5';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=8a8d7781f5';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=8a8d7781f5';
 
 // "House Cup": an hourglass per house, filled relative to the leading house. The button sits bottom-left on every
 // page from the Sorting Hat onwards, for every guest. Guests without a house get a notice in the dialog (and a dot

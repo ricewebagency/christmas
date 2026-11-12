@@ -1,6 +1,6 @@
-import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=815a25f504';
-import { initHouseCup } from './house-cup.js?v=815a25f504';
-import './click-pop.js?v=815a25f504';
+import { getPageUrl, guardPage, whenDomReady } from './guest-flow.js?v=8a8d7781f5';
+import { initHouseCup } from './house-cup.js?v=8a8d7781f5';
+import './click-pop.js?v=8a8d7781f5';
 
 const BASILISK_FRAME_SOURCES = [
     './assets/images/chamber/basilisk-stale-1.png',

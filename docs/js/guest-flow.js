@@ -1,4 +1,4 @@
-import { clearGuestCode, getGuest, getStoredGuestCode, isApiError } from './api-client.js?v=815a25f504';
+import { clearGuestCode, getGuest, getStoredGuestCode, isApiError } from './api-client.js?v=8a8d7781f5';
 
 // Relative to the site root; every built page has <base href> pointing there.
 const PAGE_PATHS = {
@@ -144,8 +144,6 @@ export function whenDomReady() {
 const DEADLINE_FORMAT = new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
     month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
     timeZone: 'Europe/Amsterdam'
 });
 

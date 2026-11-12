@@ -817,6 +817,10 @@ video {
   bottom: max(4.5cqw, 0.875rem);
 }
 
+.bottom-auto{
+  bottom: auto;
+}
+
 .left-0{
   left: 0px;
 }
@@ -951,10 +955,6 @@ video {
 
 .top-full{
   top: 100%;
-}
-
-.bottom-auto{
-  bottom: auto;
 }
 
 .-z-10{
