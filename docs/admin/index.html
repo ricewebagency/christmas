@@ -8,8 +8,8 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Christmas at the Great Hall | Beheer</title>
     <link rel="icon" href="./favicon.ico">
-    <link rel="stylesheet" href="./css/main.css?v=8e67b1c2f6">
-    <script type="module" src="./js/manage.js?v=8e67b1c2f6"></script>
+    <link rel="stylesheet" href="./css/main.css?v=77af242fad">
+    <script type="module" src="./js/manage.js?v=77af242fad"></script>
 </head>
 
 <body data-pop-scope class="min-h-dvh bg-neutral-950 font-sans text-sm text-neutral-200 antialiased" data-asset-base-path="../">
@@ -142,6 +142,7 @@
                                     <option value="sortedAt">Gesorteerd op</option>
                                     <option value="dishesUpdatedAt">Gerechten op</option>
                                     <option value="createdAt">Aangemaakt</option>
+                                    <option value="lastActiveAt">Laatst actief</option>
                                 </select>
                             </label>
                             <button id="manage-sort-dir" type="button" title="Sorteerrichting" aria-label="Sorteerrichting"
@@ -249,6 +250,24 @@
                     <button type="submit" data-pop="high" class="rounded-md bg-accent px-3 py-2 font-semibold text-neutral-950 transition hover:bg-amber-300 active:scale-95 disabled:opacity-50">Opslaan</button>
                 </div>
             </form>
+        </div>
+    </dialog>
+
+    <dialog id="manage-activity-dialog" aria-labelledby="manage-activity-title"
+        class="w-[min(44rem,calc(100vw-2rem))] rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-200 shadow-2xl shadow-black/50 backdrop:bg-black/70 backdrop:backdrop-blur-sm">
+        <div class="flex max-h-[calc(100dvh-4rem)] flex-col motion-safe:animate-popIn">
+            <div class="flex items-start justify-between gap-2 border-b border-neutral-800 p-4">
+                <div class="min-w-0">
+                    <h2 class="flex items-baseline gap-2 font-semibold text-neutral-100">
+                        <span class="text-neutral-500">Activiteit</span>
+                        <span id="manage-activity-title" class="truncate"></span>
+                        <span id="manage-activity-code" class="font-mono text-xs font-normal text-accent"></span>
+                    </h2>
+                    <p id="manage-activity-summary" class="mt-0.5 text-xs text-neutral-500"></p>
+                </div>
+                <button id="manage-activity-close" type="button" data-pop="small" aria-label="Sluiten" class="rounded-md px-2 py-1 text-neutral-500 transition hover:rotate-90 hover:text-neutral-100">✕</button>
+            </div>
+            <div id="manage-activity-body" class="min-h-0 flex-1 overflow-y-auto pb-2"></div>
         </div>
     </dialog>
 </body>

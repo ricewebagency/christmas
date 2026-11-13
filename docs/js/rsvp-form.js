@@ -1,7 +1,7 @@
-import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=8e67b1c2f6';
-import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=8e67b1c2f6';
-import { getRandomExitDelayMs } from './page-transitions.js?v=8e67b1c2f6';
-import './click-pop.js?v=8e67b1c2f6';
+import { getGuest, isApiError, sendAttendanceResponse } from './api-client.js?v=77af242fad';
+import { getNextStep, guardPage, isEditMode, redirectToPage, whenDomReady } from './guest-flow.js?v=77af242fad';
+import { getRandomExitDelayMs } from './page-transitions.js?v=77af242fad';
+import './click-pop.js?v=77af242fad';
 
 const ATTENDANCE_CHOICE_MAP = {
     yes: 'accepted',

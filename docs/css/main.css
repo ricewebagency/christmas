@@ -841,8 +841,8 @@ video {
   left: 0.75rem;
 }
 
-.left-\[-3\%\]{
-  left: -3%;
+.left-\[-7\.5\%\]{
+  left: -7.5%;
 }
 
 .left-\[154px\]{
@@ -955,10 +955,6 @@ video {
 
 .top-full{
   top: 100%;
-}
-
-.left-\[-7\.5\%\]{
-  left: -7.5%;
 }
 
 .-z-10{
@@ -1451,8 +1447,8 @@ video {
   width: 104%;
 }
 
-.w-\[106\%\]{
-  width: 106%;
+.w-\[115\%\]{
+  width: 115%;
 }
 
 .w-\[14\.0625\%\]{
@@ -1507,6 +1503,10 @@ video {
   width: min(35vw, 24rem);
 }
 
+.w-\[min\(44rem\2c calc\(100vw-2rem\)\)\]{
+  width: min(44rem, calc(100vw - 2rem));
+}
+
 .w-\[min\(62vw\2c 34rem\)\]{
   width: min(62vw, 34rem);
 }
@@ -1533,14 +1533,6 @@ video {
 
 .w-screen{
   width: 100vw;
-}
-
-.w-\[115\%\]{
-  width: 115%;
-}
-
-.w-\[min\(44rem\2c calc\(100vw-2rem\)\)\]{
-  width: min(44rem, calc(100vw - 2rem));
 }
 
 .min-w-0{
@@ -2416,6 +2408,10 @@ video {
   background-color: rgb(38 38 38 / var(--tw-bg-opacity, 1));
 }
 
+.bg-neutral-800\/60{
+  background-color: rgb(38 38 38 / 0.6);
+}
+
 .bg-neutral-900{
   --tw-bg-opacity: 1;
   background-color: rgb(23 23 23 / var(--tw-bg-opacity, 1));
@@ -2457,10 +2453,6 @@ video {
 
 .bg-transparent{
   background-color: transparent;
-}
-
-.bg-neutral-800\/60{
-  background-color: rgb(38 38 38 / 0.6);
 }
 
 .bg-\[radial-gradient\(circle\2c \#fff_0\%\2c \#ffd76a_40\%\2c rgba\(255\2c 170\2c 40\2c 0\.4\)_65\%\2c transparent_75\%\)\]{
@@ -2821,8 +2813,16 @@ video {
   padding-bottom: 1px;
 }
 
+.pb-1{
+  padding-bottom: 0.25rem;
+}
+
 .pb-10{
   padding-bottom: 2.5rem;
+}
+
+.pb-2{
+  padding-bottom: 0.5rem;
 }
 
 .pb-3{
@@ -2841,6 +2841,10 @@ video {
   padding-left: 0.5rem;
 }
 
+.pl-4{
+  padding-left: 1rem;
+}
+
 .pl-8{
   padding-left: 2rem;
 }
@@ -2855,6 +2859,10 @@ video {
 
 .pr-3{
   padding-right: 0.75rem;
+}
+
+.pr-4{
+  padding-right: 1rem;
 }
 
 .pr-5{
@@ -2899,22 +2907,6 @@ video {
 
 .pt-\[max\(6cqw\2c 1\.25rem\)\]{
   padding-top: max(6cqw, 1.25rem);
-}
-
-.pb-1{
-  padding-bottom: 0.25rem;
-}
-
-.pl-4{
-  padding-left: 1rem;
-}
-
-.pr-4{
-  padding-right: 1rem;
-}
-
-.pb-2{
-  padding-bottom: 0.5rem;
 }
 
 .text-left{
@@ -3224,6 +3216,10 @@ video {
   color: rgb(52 211 153 / 0.8);
 }
 
+.text-emerald-400\/90{
+  color: rgb(52 211 153 / 0.9);
+}
+
 .text-neutral-100{
   --tw-text-opacity: 1;
   color: rgb(245 245 245 / var(--tw-text-opacity, 1));
@@ -3286,10 +3282,6 @@ video {
 .text-yellow-300{
   --tw-text-opacity: 1;
   color: rgb(253 224 71 / var(--tw-text-opacity, 1));
-}
-
-.text-emerald-400\/90{
-  color: rgb(52 211 153 / 0.9);
 }
 
 .underline{

@@ -1,10 +1,10 @@
-import { getGuest, getInvitationData, isApiError, sendSortingHouseResult, SORTING_HOUSE_POINTS } from './api-client.js?v=8e67b1c2f6';
-import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js?v=8e67b1c2f6';
-import { initHouseCup } from './house-cup.js?v=8e67b1c2f6';
-import { speakTenPoints } from './map-dumbledore.js?v=8e67b1c2f6';
-import { burstHousePoints } from './map-rewards.js?v=8e67b1c2f6';
-import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js?v=8e67b1c2f6';
-import { playPop } from './click-pop.js?v=8e67b1c2f6';
+import { getGuest, getInvitationData, isApiError, sendSortingHouseResult, SORTING_HOUSE_POINTS } from './api-client.js?v=77af242fad';
+import { getNextStep, getPageUrl, guardPage, redirectToPage, whenDomReady } from './guest-flow.js?v=77af242fad';
+import { initHouseCup } from './house-cup.js?v=77af242fad';
+import { speakTenPoints } from './map-dumbledore.js?v=77af242fad';
+import { burstHousePoints } from './map-rewards.js?v=77af242fad';
+import { resetLocalStorageState, writeJsonToLocalStorage } from './storage-utils.js?v=77af242fad';
+import { playPop } from './click-pop.js?v=77af242fad';
 
 // Pause between the hat announcing the house and the "+10" for it.
 const SORTING_POINTS_DELAY_MS = 500;

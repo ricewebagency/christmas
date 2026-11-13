@@ -1,4 +1,4 @@
-import { clearGuestCode, getGuest, getStoredGuestCode, isApiError } from './api-client.js?v=8e67b1c2f6';
+import { clearGuestCode, getGuest, getStoredGuestCode, isApiError } from './api-client.js?v=77af242fad';
 
 // Relative to the site root; every built page has <base href> pointing there.
 const PAGE_PATHS = {

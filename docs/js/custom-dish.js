@@ -1,4 +1,4 @@
-import { CUSTOM_DISH_DESCRIPTION_MAX_LENGTH, CUSTOM_DISH_NAME_MAX_LENGTH, normalizeCustomDish } from './api-client.js?v=8e67b1c2f6';
+import { CUSTOM_DISH_DESCRIPTION_MAX_LENGTH, CUSTOM_DISH_NAME_MAX_LENGTH, normalizeCustomDish } from './api-client.js?v=77af242fad';
 
 // "Your own dish": the last page of the dish carousel in the cabin.
 

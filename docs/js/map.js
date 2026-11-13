@@ -1,15 +1,15 @@
-import { fetchDishCatalog } from './api-client.js?v=8e67b1c2f6';
-import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=8e67b1c2f6';
-import { initMapChangesDialog } from './map-changes.js?v=8e67b1c2f6';
-import { initMapEasterEggs } from './map-easter-eggs.js?v=8e67b1c2f6';
-import { initMapFinale } from './map-finale.js?v=8e67b1c2f6';
-import { initMapFootsteps } from './map-footsteps.js?v=8e67b1c2f6';
-import { initHouseCup } from './house-cup.js?v=8e67b1c2f6';
-import { initMapReveal } from './map-reveal.js?v=8e67b1c2f6';
-import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=8e67b1c2f6';
-import { createEggRewards } from './map-rewards.js?v=8e67b1c2f6';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=8e67b1c2f6';
-import './click-pop.js?v=8e67b1c2f6';
+import { fetchDishCatalog } from './api-client.js?v=77af242fad';
+import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=77af242fad';
+import { initMapChangesDialog } from './map-changes.js?v=77af242fad';
+import { initMapEasterEggs } from './map-easter-eggs.js?v=77af242fad';
+import { initMapFinale } from './map-finale.js?v=77af242fad';
+import { initMapFootsteps } from './map-footsteps.js?v=77af242fad';
+import { initHouseCup } from './house-cup.js?v=77af242fad';
+import { initMapReveal } from './map-reveal.js?v=77af242fad';
+import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=77af242fad';
+import { createEggRewards } from './map-rewards.js?v=77af242fad';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=77af242fad';
+import './click-pop.js?v=77af242fad';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
