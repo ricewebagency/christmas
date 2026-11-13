@@ -121,6 +121,15 @@ module.exports = {
           "0%": { backgroundPosition: "200% center" },
           "100%": { backgroundPosition: "-200% center" },
         },
+        // A gold glint sweeps over "Mischief managed" (gradient set on the element), then rests.
+        inkShimmer: {
+          "0%": { backgroundPosition: "100% 0" },
+          "30%, 100%": { backgroundPosition: "0% 0" },
+        },
+        inkBreathe: {
+          "0%, 100%": { opacity: "0.6" },
+          "50%": { opacity: "1" },
+        },
         tilePulse: {
           "0%": { boxShadow: "0 0 0 0 rgba(198, 164, 90, 0.45)" },
           "100%": { boxShadow: "0 0 0 8px rgba(198, 164, 90, 0)" },
@@ -277,6 +286,8 @@ module.exports = {
         popIn: "popIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards",
         cardOut: "cardOut 0.3s ease-in forwards",
         shimmer: "shimmer 8s linear infinite",
+        inkShimmer: "inkShimmer 4.2s ease-in-out infinite",
+        inkBreathe: "inkBreathe 4.2s ease-in-out infinite",
         tilePulse: "tilePulse 0.9s ease-out",
         logoSwapA: "logoSwapA 16s ease-in-out infinite",
         logoSwapB: "logoSwapB 16s ease-in-out infinite",

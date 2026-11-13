@@ -1,18 +1,24 @@
-import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=77af242fad';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=77af242fad';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=77af242fad';
+import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=02bc12da1f';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=02bc12da1f';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=02bc12da1f';
 
 // "House Cup": an hourglass per house, filled relative to the leading house. The button sits bottom-left on every
 // page from the Sorting Hat onwards, for every guest. Guests without a house get a notice in the dialog (and a dot
 // on the button). Standings come with the guest state and are refreshed after every egg find on the map.
+// Points other guests earned since this browser last opened the dialog show as a quiet dot, a one-time pulse on page
+// load and a "+N" per house in the dialog.
 const HOUSES = {
-    gryffindor: { name: 'Gryffindor', fill: 'from-[#5c0707] to-[#ae2a1f]' },
-    hufflepuff: { name: 'Hufflepuff', fill: 'from-[#a8770f] to-[#ecb939]' },
-    ravenclaw: { name: 'Ravenclaw', fill: 'from-[#0e1a40] to-[#2d4a8a]' },
-    slytherin: { name: 'Slytherin', fill: 'from-[#10301c] to-[#2a6b40]' }
+    // glow: same colours as in map-rewards.js.
+    gryffindor: { name: 'Gryffindor', fill: 'from-[#5c0707] to-[#ae2a1f]', glow: 'rgba(255, 197, 0, 0.55)' },
+    hufflepuff: { name: 'Hufflepuff', fill: 'from-[#a8770f] to-[#ecb939]', glow: 'rgba(236, 185, 57, 0.6)' },
+    ravenclaw: { name: 'Ravenclaw', fill: 'from-[#0e1a40] to-[#2d4a8a]', glow: 'rgba(148, 107, 45, 0.6)' },
+    slytherin: { name: 'Slytherin', fill: 'from-[#10301c] to-[#2a6b40]', glow: 'rgba(170, 170, 170, 0.6)' }
 };
 // An empty-looking glass reads as "no data"; a sliver of sand reads as "nothing yet".
 const MIN_FILL_PERCENT = 3;
+const SEEN_STORAGE_PREFIX = 'house-cup-seen:';
+// After the page has settled, so the pulse isn't lost in the page's own entrance.
+const NEWS_PULSE_DELAY_MS = 1200;
 const PARCHMENT_URL = new URL('../assets/images/parchment-cropped.png', import.meta.url).href;
 const crestUrl = (house) => new URL(`../assets/images/admin/${house}-logo.png`, import.meta.url).href;
 
@@ -22,7 +28,8 @@ const BUTTON_HTML = `
         <path d="M7 4h10v5a5 5 0 0 1-10 0V4z" />
         <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
     </svg>
-    <span data-house-cup-badge aria-hidden="true" class="absolute -right-0.5 -top-0.5 hidden h-2.5 w-2.5 rounded-full bg-amber-300 ring-1 ring-neutral-950/60 motion-safe:animate-pulse"></span>`;
+    <span data-house-cup-badge aria-hidden="true" class="absolute -right-0.5 -top-0.5 hidden h-2.5 w-2.5 rounded-full bg-amber-300 ring-1 ring-neutral-950/60 motion-safe:animate-pulse"></span>
+    <span data-house-cup-news aria-hidden="true" class="absolute -right-0.5 -top-0.5 hidden h-2 w-2 rounded-full bg-amber-100 ring-1 ring-neutral-950/60"></span>`;
 
 const houseColumnHtml = (house) => `
     <li data-house-cup-house="${house}" class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
@@ -30,7 +37,10 @@ const houseColumnHtml = (house) => `
         <div aria-hidden="true" class="relative h-36 w-7 overflow-hidden rounded-full border border-charcoal/40 bg-charcoal/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] short:h-24 short:w-6">
             <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t ${HOUSES[house].fill} transition-[height] duration-[1400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"></div>
         </div>
-        <span data-house-cup-points class="text-lg leading-none short:text-base">0</span>
+        <span class="relative text-lg leading-none short:text-base">
+            <span data-house-cup-points>0</span>
+            <span data-house-cup-gain class="absolute left-full top-0 ml-0.5 hidden whitespace-nowrap text-[10px] italic leading-none text-charcoal/70"></span>
+        </span>
         <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">${HOUSES[house].name}</span>
         <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
     </li>`;
@@ -53,6 +63,7 @@ const DIALOG_HTML = `
             <ul aria-label="Points per house" class="mt-5 flex items-end justify-between gap-2 short:mt-3">
                 ${Object.keys(HOUSES).map(houseColumnHtml).join('')}
             </ul>
+            <p data-house-cup-gain-note class="mt-2 hidden text-[11px] italic leading-snug text-charcoal/60">The small numbers are points earned since your last look.</p>
 
             <p data-house-cup-found class="mt-5 text-xs italic leading-snug text-charcoal/75 short:mt-3"></p>
         </div>
@@ -88,6 +99,26 @@ function unsortedHint(guest) {
 
     return 'Let the Sorting Hat decide and your house earns 10 points the moment you are sorted.';
 }
+
+// Per browser: the standings as they were when this guest last opened the dialog.
+function readSeen(code) {
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(SEEN_STORAGE_PREFIX + code) ?? 'null');
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeSeen(code, seen) {
+    try {
+        window.localStorage.setItem(SEEN_STORAGE_PREFIX + code, JSON.stringify(seen));
+    } catch {
+        // Without storage the news just isn't remembered.
+    }
+}
+
+const currentPoints = (points) => Object.fromEntries(Object.keys(HOUSES).map((house) => [house, points[house] ?? 0]));
 
 // Button and dialog live bottom-left (volume button below, admin button above; audio-toggle.js).
 function mount() {
@@ -127,11 +158,14 @@ export function initHouseCup(guest) {
     const unsortedEl = dialog.querySelector('[data-house-cup-unsorted]');
     const unsortedHintEl = dialog.querySelector('[data-house-cup-unsorted-hint]');
     const badgeEl = openButton.querySelector('[data-house-cup-badge]');
+    const newsEl = openButton.querySelector('[data-house-cup-news]');
+    const gainNoteEl = dialog.querySelector('[data-house-cup-gain-note]');
     const columns = [...dialog.querySelectorAll('[data-house-cup-house]')].map((el) => ({
         house: el.dataset.houseCupHouse,
         el,
         fillEl: el.querySelector('[data-house-cup-fill]'),
-        pointsEl: el.querySelector('[data-house-cup-points]')
+        pointsEl: el.querySelector('[data-house-cup-points]'),
+        gainEl: el.querySelector('[data-house-cup-gain]')
     }));
 
     let house = HOUSES[guest.house] ? guest.house : null;
@@ -139,11 +173,46 @@ export function initHouseCup(guest) {
     let foundCount = guest.foundEggIds?.length ?? 0;
     let pulseAnimation = null;
 
+    // null when there's nothing to compare against (no guest code). A first visit stores the current standings, so
+    // nothing reads as new; a score that went down (admin reset) lowers the mark, so later gains still show.
+    const code = guest.code || null;
+    let seen = null;
+
+    if (code) {
+        const stored = readSeen(code);
+        const now = currentPoints(points);
+        seen = stored
+            ? Object.fromEntries(Object.entries(now).map(([column, value]) => {
+                const mark = Number(stored[column]);
+                return [column, Number.isFinite(mark) ? Math.min(mark, value) : value];
+            }))
+            : now;
+        writeSeen(code, seen);
+    }
+
+    // The gains shown in the open dialog; fixed when it opens, so they stay put while the guest reads them.
+    let shownGains = {};
+
+    const gainsSinceSeen = () => (seen
+        ? Object.fromEntries(Object.keys(HOUSES).map((column) => [column, Math.max(0, (points[column] ?? 0) - seen[column])]))
+        : {});
+    const hasNews = () => Object.values(gainsSinceSeen()).some((gain) => gain > 0);
+
+    const markSeen = () => {
+        if (code) {
+            seen = currentPoints(points);
+            writeSeen(code, seen);
+        }
+    };
+
     const renderButton = () => {
-        const label = house ? 'House Cup' : 'House Cup (not sorted into a house yet)';
+        // The "not sorted" dot wins: that one asks for something.
+        const news = Boolean(house) && hasNews();
+        const label = !house ? 'House Cup (not sorted into a house yet)' : news ? 'House Cup (new points)' : 'House Cup';
         openButton.setAttribute('aria-label', label);
         openButton.title = label;
         badgeEl?.classList.toggle('hidden', Boolean(house));
+        newsEl?.classList.toggle('hidden', !news);
     };
 
     const renderFill = () => {
@@ -158,17 +227,25 @@ export function initHouseCup(guest) {
     };
 
     const renderText = () => {
-        columns.forEach(({ house: column, el, pointsEl }) => {
+        columns.forEach(({ house: column, el, pointsEl, gainEl }) => {
             const own = column === house;
             const value = points[column] ?? 0;
+            const gain = shownGains[column] ?? 0;
 
             if (pointsEl instanceof HTMLElement) {
                 pointsEl.textContent = String(value);
             }
 
+            if (gainEl instanceof HTMLElement) {
+                gainEl.textContent = `+${gain}`;
+                gainEl.classList.toggle('hidden', gain === 0);
+            }
+
             el.querySelector('[data-house-cup-own]')?.classList.toggle('invisible', !own);
-            el.setAttribute('aria-label', `${HOUSES[column].name}: ${value} points${own ? ' (your house)' : ''}`);
+            el.setAttribute('aria-label', `${HOUSES[column].name}: ${value} points${gain > 0 ? `, ${gain} since your last look` : ''}${own ? ' (your house)' : ''}`);
         });
+
+        gainNoteEl?.classList.toggle('hidden', !Object.values(shownGains).some((gain) => gain > 0));
 
         if (summaryEl instanceof HTMLElement) {
             summaryEl.textContent = describeStandings(points);
@@ -204,6 +281,9 @@ export function initHouseCup(guest) {
     openButton.addEventListener('pointerdown', (event) => event.stopPropagation());
     openButton.addEventListener('click', (event) => {
         event.stopPropagation();
+        shownGains = gainsSinceSeen();
+        markSeen();
+        renderButton();
         renderText();
         emptyFill();
         playMapSound('popup');
@@ -232,15 +312,24 @@ export function initHouseCup(guest) {
     document.body.dataset.houseCupVisible = '';
     window.dispatchEvent(new CustomEvent('house-cup-visible'));
 
-    return {
+    const api = {
         update(nextPoints, nextFoundCount) {
+            const previous = points;
             points = nextPoints ? { ...points, ...nextPoints } : points;
             foundCount = Number.isFinite(nextFoundCount) ? nextFoundCount : foundCount;
 
             if (dialog.open) {
+                // Watching the standings as they change: all of it counts as seen.
+                markSeen();
                 renderText();
                 renderFill();
+            } else if (seen && house) {
+                // The guest's own points just flew into the cup, so they aren't news.
+                seen = { ...seen, [house]: seen[house] + Math.max(0, (points[house] ?? 0) - (previous[house] ?? 0)) };
+                writeSeen(code, seen);
             }
+
+            renderButton();
         },
 
         setHouse(nextHouse) {
@@ -275,4 +364,14 @@ export function initHouseCup(guest) {
             playMapSound('twinkle', 0, { volume: 0.6 });
         }
     };
+
+    // Points came in while the guest was away: light the button once, in the colour of the house that gained most.
+    const gains = gainsSinceSeen();
+    const topGainer = Object.keys(gains).reduce((best, column) => (gains[column] > (gains[best] ?? 0) ? column : best), null);
+
+    if (topGainer) {
+        window.setTimeout(() => api.pulse(HOUSES[topGainer].glow), NEWS_PULSE_DELAY_MS);
+    }
+
+    return api;
 }

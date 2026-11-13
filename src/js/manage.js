@@ -615,12 +615,30 @@ function compareText(left, right) {
     return String(left).localeCompare(String(right), 'nl', { sensitivity: 'base' });
 }
 
+const RSVP_RANK = { accepted: 0, declined: 1, pending: 2 };
+
+function rsvpRank(guest) {
+    return RSVP_RANK[guest.rsvpStatus] ?? RSVP_RANK.pending;
+}
+
+// Zonder RSVP altijd onderaan, ongeacht sorteerrichting.
+function comparePending(a, b) {
+    return Number(rsvpRank(a) === RSVP_RANK.pending) - Number(rsvpRank(b) === RSVP_RANK.pending);
+}
+
 function compareGuests(a, b, key, dir) {
-    // Standaard: admins, dan meeste easter eggs, dan meeste gerechten.
+    // Standaard: JA, dan NEE, dan geen RSVP; daarbinnen eerst gesorteerd (huis),
+    // dan admins, meeste easter eggs, meeste gerechten.
     if (key === 'default') {
-        return ((Number(b.isAdmin) - Number(a.isAdmin))
+        return (rsvpRank(a) - rsvpRank(b))
+            || (Number(Boolean(b.house)) - Number(Boolean(a.house)))
+            || ((Number(b.isAdmin) - Number(a.isAdmin))
             || (b.foundEggIds.length - a.foundEggIds.length)
             || (b.dishCount - a.dishCount)) * dir;
+    }
+
+    if (key === 'rsvpStatus') {
+        return comparePending(a, b) || (rsvpRank(a) - rsvpRank(b)) * dir;
     }
 
     const left = a[key] ?? '';

@@ -908,10 +908,13 @@ function initNoxLumos(mapEl, onFound) {
 const REVELIO_REWARD_DELAY_MS = 1800;
 const MISCHIEF_REWARD_DELAY_MS = 1400;
 
-function initSpells(mapEl, onFound) {
+function initSpells(mapEl, onFound, isFound) {
     const revealRootEl = document.querySelector('[data-map-reveal-root]');
     const revealButtonEl = document.querySelector('[data-map-reveal]');
     const closeButtonEl = document.querySelector('[data-map-close]');
+
+    // Until found, "Mischief managed" shimmers in gold (Tailwind variants on data-unfound in map/index.html).
+    closeButtonEl?.toggleAttribute('data-unfound', !isFound('mischief'));
 
     // Capture phase: read the state before map-reveal.js / map.js change it.
     revealButtonEl?.addEventListener('click', () => {
@@ -923,6 +926,7 @@ function initSpells(mapEl, onFound) {
     closeButtonEl?.addEventListener('click', () => {
         if (isMapOpen(mapEl)) {
             onFound('mischief', { point: centerOf(closeButtonEl), delayMs: MISCHIEF_REWARD_DELAY_MS });
+            closeButtonEl.removeAttribute('data-unfound');
         }
     }, true);
 }
@@ -933,5 +937,5 @@ export function initMapEasterEggs(mapEl, { footsteps, onFound = () => {}, isFoun
     initCastle(mapEl, onFound);
     initSnow(mapEl, onFound, isFound);
     initNoxLumos(mapEl, onFound);
-    initSpells(mapEl, onFound);
+    initSpells(mapEl, onFound, isFound);
 }

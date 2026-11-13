@@ -1,4 +1,4 @@
-import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=77af242fad';
+import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=02bc12da1f';
 
 // Empty = mock mode (state in localStorage). Example: 'https://<function-app>.azurewebsites.net'.
 // Local dev origins (localhost/127.0.0.1:8000) must be in the Function App's CORS list.

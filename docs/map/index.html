@@ -7,12 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Christmas at the Great Hall | Marauder's Map</title>
     <link rel="icon" href="./favicon.ico">
-    <link rel="stylesheet" href="./css/main.css?v=77af242fad">
-    <script src="./js/audio-toggle.js?v=77af242fad"></script>
-    <script src="./js/reveal-sequence.js?v=77af242fad" defer></script>
-    <script src="./js/smooth-scroll.js?v=77af242fad" defer></script>
-    <script src="./js/background-audio.js?v=77af242fad" defer></script>
-    <script type="module" src="./js/map.js?v=77af242fad"></script>
+    <link rel="stylesheet" href="./css/main.css?v=02bc12da1f">
+    <script src="./js/audio-toggle.js?v=02bc12da1f"></script>
+    <script src="./js/reveal-sequence.js?v=02bc12da1f" defer></script>
+    <script src="./js/smooth-scroll.js?v=02bc12da1f" defer></script>
+    <script src="./js/background-audio.js?v=02bc12da1f" defer></script>
+    <script type="module" src="./js/map.js?v=02bc12da1f"></script>
 </head>
 
 <!-- data-reveal-mode="manual": the declined letter's reveal starts from map.js (reveal-sequence:start). -->
@@ -196,31 +196,32 @@
                                 </div>
                                 <button data-map-close type="button"
                                     class="group/close pointer-events-none relative inline-flex min-h-11 items-center gap-1.5 px-2 text-sm italic text-charcoal/85 transition-[color,transform] duration-200 hover:text-charcoal active:scale-95 focus:outline-none focus-visible:outline-none">
-                                    <!-- Ink flourishes; the right one is mirrored. -->
+                                    <!-- Ink flourishes; the right one is mirrored. They breathe while the secret is unfound (data-unfound, map-easter-eggs.js). -->
                                     <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
-                                        class="h-3 w-8 shrink-0 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100">
+                                        class="h-3 w-8 shrink-0 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100 group-data-[state=open]:group-data-[unfound]/close:animate-inkBreathe group-data-[state=open]:group-data-[unfound]/close:[animation-delay:3800ms] motion-reduce:!animate-none">
                                         <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
                                     </svg>
-                                    <span class="pointer-events-auto cursor-pointer py-2.5 underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 group-hover/close:decoration-charcoal/60 group-focus-visible/close:decoration-charcoal">Mischief managed</span>
+                                    <!-- Unfound: gold underline and a gold glint sweeping over the ink once the section has faded in; reduced motion keeps only the underline. -->
+                                    <span class="pointer-events-auto cursor-pointer py-2.5 underline decoration-charcoal/30 underline-offset-2 transition-colors duration-200 group-hover/close:decoration-charcoal/60 group-focus-visible/close:decoration-charcoal group-data-[unfound]/close:decoration-accent/70 group-data-[unfound]/close:bg-[linear-gradient(110deg,rgb(43_43_43/0.85)_40%,#C6A45A_50%,rgb(43_43_43/0.85)_60%)] group-data-[unfound]/close:bg-[length:250%_100%] group-data-[unfound]/close:bg-[position:0%_0] group-data-[unfound]/close:bg-clip-text group-data-[unfound]/close:text-transparent group-data-[state=open]:group-data-[unfound]/close:animate-inkShimmer group-data-[state=open]:group-data-[unfound]/close:[animation-delay:3800ms] motion-reduce:!animate-none">Mischief managed</span>
                                     <svg aria-hidden="true" viewBox="0 0 40 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
-                                        class="h-3 w-8 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100">
+                                        class="h-3 w-8 shrink-0 -scale-x-100 opacity-60 transition-opacity duration-200 group-hover/close:opacity-100 group-data-[state=open]:group-data-[unfound]/close:animate-inkBreathe group-data-[state=open]:group-data-[unfound]/close:[animation-delay:3800ms] motion-reduce:!animate-none">
                                         <path d="M38 6C30 6 26 9 20 8 13 7 11 2 6 3 2 4 2 9 6 9 9 9 9 5 6 6" />
                                     </svg>
-                                    <!-- Twinkles, staggered. -->
+                                    <!-- Gold twinkles, staggered; only while the secret is unfound. -->
                                     <svg aria-hidden="true" viewBox="0 0 10 10" fill="currentColor"
-                                        class="pointer-events-none absolute left-[18%] top-0.5 h-2 w-2 animate-mapTwinkle motion-reduce:animate-none">
+                                        class="pointer-events-none absolute left-[18%] top-0.5 hidden h-2 w-2 text-accent animate-mapTwinkle group-data-[unfound]/close:block motion-reduce:animate-none">
                                         <path d="M5 0 6 4 10 5 6 6 5 10 4 6 0 5 4 4Z" />
                                     </svg>
                                     <svg aria-hidden="true" viewBox="0 0 10 10" fill="currentColor"
-                                        class="pointer-events-none absolute right-[22%] top-0 h-2.5 w-2.5 animate-mapTwinkle [animation-delay:800ms] motion-reduce:animate-none">
+                                        class="pointer-events-none absolute right-[22%] top-0 hidden h-2.5 w-2.5 text-accent animate-mapTwinkle [animation-delay:800ms] group-data-[unfound]/close:block motion-reduce:animate-none">
                                         <path d="M5 0 6 4 10 5 6 6 5 10 4 6 0 5 4 4Z" />
                                     </svg>
                                     <svg aria-hidden="true" viewBox="0 0 10 10" fill="currentColor"
-                                        class="pointer-events-none absolute bottom-0.5 left-[36%] h-1.5 w-1.5 animate-mapTwinkle [animation-delay:1600ms] motion-reduce:animate-none">
+                                        class="pointer-events-none absolute bottom-0.5 left-[36%] hidden h-1.5 w-1.5 text-accent animate-mapTwinkle [animation-delay:1600ms] group-data-[unfound]/close:block motion-reduce:animate-none">
                                         <path d="M5 0 6 4 10 5 6 6 5 10 4 6 0 5 4 4Z" />
                                     </svg>
                                     <svg aria-hidden="true" viewBox="0 0 10 10" fill="currentColor"
-                                        class="pointer-events-none absolute bottom-1 right-[10%] h-2 w-2 animate-mapTwinkle [animation-delay:1200ms] motion-reduce:animate-none">
+                                        class="pointer-events-none absolute bottom-1 right-[10%] hidden h-2 w-2 text-accent animate-mapTwinkle [animation-delay:1200ms] group-data-[unfound]/close:block motion-reduce:animate-none">
                                         <path d="M5 0 6 4 10 5 6 6 5 10 4 6 0 5 4 4Z" />
                                     </svg>
                                 </button>

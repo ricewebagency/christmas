@@ -1,6 +1,6 @@
-import { isApiError, verifyGuestCode } from './api-client.js?v=77af242fad';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=77af242fad';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=77af242fad';
+import { isApiError, verifyGuestCode } from './api-client.js?v=02bc12da1f';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=02bc12da1f';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=02bc12da1f';
 
 const CODE_LENGTH = 4;
 

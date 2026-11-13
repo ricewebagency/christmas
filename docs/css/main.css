@@ -869,6 +869,10 @@ video {
   left: 81.4453%;
 }
 
+.left-full{
+  left: 100%;
+}
+
 .right-0{
   right: 0px;
 }
@@ -1060,6 +1064,10 @@ video {
 
 .mb-1{
   margin-bottom: 0.25rem;
+}
+
+.ml-0\.5{
+  margin-left: 0.125rem;
 }
 
 .ml-1{
@@ -4605,6 +4613,10 @@ body.audio-gate-visible #sorting-main {
   top: 2%;
 }
 
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:block{
+  display: block;
+}
+
 .group[data-state="closing"] .group-data-\[state\=closing\]\:hidden{
   display: none;
 }
@@ -4667,6 +4679,59 @@ body.audio-gate-visible #sorting-main {
   animation: mapPeek 3.6s ease-in-out infinite;
 }
 
+@keyframes inkBreathe{
+  0%, 100%{
+    opacity: 0.6;
+  }
+
+  50%{
+    opacity: 1;
+  }
+}
+
+.group[data-state="open"] .group\/close[data-unfound] .group-data-\[state\=open\]\:group-data-\[unfound\]\/close\:animate-inkBreathe{
+  animation: inkBreathe 4.2s ease-in-out infinite;
+}
+
+@keyframes inkShimmer{
+  0%{
+    background-position: 100% 0;
+  }
+
+  30%, 100%{
+    background-position: 0% 0;
+  }
+}
+
+.group[data-state="open"] .group\/close[data-unfound] .group-data-\[state\=open\]\:group-data-\[unfound\]\/close\:animate-inkShimmer{
+  animation: inkShimmer 4.2s ease-in-out infinite;
+}
+
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:bg-\[linear-gradient\(110deg\2c rgb\(43_43_43\/0\.85\)_40\%\2c \#C6A45A_50\%\2c rgb\(43_43_43\/0\.85\)_60\%\)\]{
+  background-image: linear-gradient(110deg,rgb(43 43 43/0.85) 40%,#C6A45A 50%,rgb(43 43 43/0.85) 60%);
+}
+
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:bg-\[length\:250\%_100\%\]{
+  background-size: 250% 100%;
+}
+
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:bg-clip-text{
+  -webkit-background-clip: text;
+          background-clip: text;
+}
+
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:bg-\[position\:0\%_0\]{
+  background-position: 0% 0;
+}
+
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:text-transparent{
+  color: transparent;
+}
+
+.group\/close[data-unfound] .group-data-\[unfound\]\/close\:decoration-accent\/70{
+  text-decoration-color: rgb(198 164 90 / 0.7);
+}
+
 .group\/reveal[data-spell="casting"] .group-data-\[spell\=casting\]\/reveal\:opacity-0{
   opacity: 0;
 }
@@ -4726,6 +4791,10 @@ body.audio-gate-visible #sorting-main {
 
 .group[data-state="open"] .group-data-\[state\=open\]\:duration-\[1400ms\]{
   transition-duration: 1400ms;
+}
+
+.group[data-state="open"] .group\/close[data-unfound] .group-data-\[state\=open\]\:group-data-\[unfound\]\/close\:\[animation-delay\:3800ms\]{
+  animation-delay: 3800ms;
 }
 
 .group[data-state="open"] .group-data-\[state\=open\]\:\[transform\:rotateX\(0deg\)\]{
