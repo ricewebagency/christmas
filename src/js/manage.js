@@ -903,7 +903,7 @@ function renderCourse(course, index, claimedBy, customDishes = []) {
     const list = visible.length || visibleCustom.length
         ? visible.map((dish) => renderDishItem(dish, claimedBy.get(String(dish.id)))).join('') + visibleCustom.map(renderCustomDishItem).join('')
         : '<li class="py-1.5 pl-9 pr-3 text-neutral-500">Alles geclaimd.</li>';
-    const customCount = customDishes.length ? ` <span class="text-accent">+${customDishes.length} eigen</span>` : '';
+    const customCount = customDishes.length ? `<span class="text-accent">+${customDishes.length} eigen</span>` : '';
 
     return `
         <div data-course-key="${escapeHtml(key)}" class="overflow-hidden rounded-md border border-neutral-800">
@@ -914,7 +914,7 @@ function renderCourse(course, index, claimedBy, customDishes = []) {
                 <span aria-hidden="true" class="hidden h-1.5 w-24 overflow-hidden rounded-full bg-neutral-800 sm:block">
                     <span class="block h-full rounded-full transition-all duration-700 ${full ? 'bg-emerald-500' : 'bg-accent'}" style="width: ${percent}%"></span>
                 </span>
-                <span class="min-w-24 text-right text-xs ${full ? 'text-emerald-400' : 'text-neutral-400'}">${claimed}/${dishes.length} geclaimd${customCount}</span>
+                <span class="flex min-w-24 flex-col items-end text-xs ${full ? 'text-emerald-400' : 'text-neutral-400'}"><span>${claimed}/${dishes.length} geclaimd</span>${customCount}</span>
             </button>
             <div data-course-dishes class="${collapseClass(expanded)}" ${expanded ? '' : 'inert'}>
                 <div class="min-h-0 overflow-hidden">

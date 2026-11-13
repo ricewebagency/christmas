@@ -31,7 +31,7 @@
     </div>
 
     <!-- Desk background per house (map.js sets data-house); only the matching image is downloaded. -->
-    <div data-map-view data-map-background aria-hidden="true"
+    <div data-map-view data-map-background data-house="default" aria-hidden="true"
         class="pointer-events-none absolute inset-0 z-0 bg-cover bg-[position:20%_center] bg-no-repeat data-[house=default]:bg-[url('../assets/images/map/map-background.png')] data-[house=gryffindor]:bg-[url('../assets/images/map/map-background-gryffindor.png')] data-[house=hufflepuff]:bg-[url('../assets/images/map/map-background-hufflepuff.png')] data-[house=ravenclaw]:bg-[url('../assets/images/map/map-background-ravenclaw.png')] data-[house=slytherin]:bg-[url('../assets/images/map/map-background-slytherin.png')]">
         <!-- Candlelight flicker. -->
         <div class="absolute inset-0 bg-black opacity-0 animate-candleFlicker motion-reduce:animate-none"></div>

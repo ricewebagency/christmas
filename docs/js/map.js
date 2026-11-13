@@ -1,15 +1,15 @@
-import { fetchDishCatalog } from './api-client.js?v=35850745a3';
-import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=35850745a3';
-import { initMapChangesDialog } from './map-changes.js?v=35850745a3';
-import { initMapEasterEggs } from './map-easter-eggs.js?v=35850745a3';
-import { initMapFinale } from './map-finale.js?v=35850745a3';
-import { initMapFootsteps } from './map-footsteps.js?v=35850745a3';
-import { initHouseCup } from './house-cup.js?v=35850745a3';
-import { initMapReveal } from './map-reveal.js?v=35850745a3';
-import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=35850745a3';
-import { createEggRewards } from './map-rewards.js?v=35850745a3';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=35850745a3';
-import './click-pop.js?v=35850745a3';
+import { fetchDishCatalog } from './api-client.js?v=eb274ee553';
+import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=eb274ee553';
+import { initMapChangesDialog } from './map-changes.js?v=eb274ee553';
+import { initMapEasterEggs } from './map-easter-eggs.js?v=eb274ee553';
+import { initMapFinale } from './map-finale.js?v=eb274ee553';
+import { initMapFootsteps } from './map-footsteps.js?v=eb274ee553';
+import { initHouseCup } from './house-cup.js?v=eb274ee553';
+import { initMapReveal } from './map-reveal.js?v=eb274ee553';
+import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=eb274ee553';
+import { createEggRewards } from './map-rewards.js?v=eb274ee553';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=eb274ee553';
+import './click-pop.js?v=eb274ee553';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
