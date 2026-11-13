@@ -1,9 +1,9 @@
 [
   {
-    "fileName": "Lumos! Light for the tree, light for the hall, light for us all.mp3",
+    "fileName": "Lumos! Let there be light, and perhaps a little pudding.mp3",
     "sentences": [
-      { "text": "Lumos!", "durationMs": 1000 },
-      { "text": "Light for the tree, light for the hall, light for us all.", "durationMs": 3800 }
+      { "text": "Lumos!", "durationMs": 2270 },
+      { "text": "Let there be light, and perhaps a little pudding.", "durationMs": 3800 }
     ]
   },
   {
@@ -14,10 +14,10 @@
     ]
   },
   {
-    "fileName": "A little light for the season of giving. Lumos!.mp3",
+    "fileName": "Lumos! A little light for the season of giving.mp3",
     "sentences": [
-      { "text": "A little light for the season of giving.", "durationMs": 3400 },
-      { "text": "Lumos!", "durationMs": 1300 }
+      { "text": "Lumos!", "durationMs": 1300 },
+      { "text": "A little light for the season of giving.", "durationMs": 3400 }
     ]
   },
   {

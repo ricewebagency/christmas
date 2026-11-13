@@ -376,6 +376,18 @@ function renderDeclinedView(guest) {
     });
 }
 
+const BACKGROUND_HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
+
+// Swaps the desk background for the guest's house (Tailwind data-[house=...] variants in map/index.html).
+function renderHouseBackground(house) {
+    const backgroundEl = document.querySelector('[data-map-background]');
+    const key = String(house ?? '').toLowerCase();
+
+    if (backgroundEl instanceof HTMLElement) {
+        backgroundEl.dataset.house = BACKGROUND_HOUSES.includes(key) ? key : 'default';
+    }
+}
+
 async function bootstrapMapPage() {
     const guest = await guardPage('map');
 
@@ -393,6 +405,7 @@ async function bootstrapMapPage() {
         return;
     }
 
+    renderHouseBackground(guest.house);
     initMap(guest, houseCup);
     renderEventDetails(guest);
     renderChangeControls(guest);

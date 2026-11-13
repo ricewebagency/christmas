@@ -27,9 +27,9 @@ const SORTING_WELCOME = 'A new member deserves a proper welcome';
 // Incantations for Nox / Lumos (speakSpell), named after what he says.
 const SPELL_LINES = {
     lumos: [
-        'Lumos! Light for the tree, light for the hall, light for us all',
+        'Lumos! Let there be light, and perhaps a little pudding',
         'Lumos! Now... where did I leave my lemon drops',
-        'A little light for the season of giving. Lumos!'
+        'Lumos! A little light for the season of giving'
     ],
     nox: [
         'Nox (2)',

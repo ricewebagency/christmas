@@ -1,8 +1,8 @@
 // Revelio: the theme party details stay hidden until the guest casts the spell.
 // States on [data-map-reveal-root] (data-spell): hidden -> casting -> revealed.
 // Timings match the revelio* animations in tailwind.config.js.
-import { playMapSound } from './map-sounds.js?v=93d7544f9f';
-import { showSubtitlesFor } from './map-dumbledore.js?v=93d7544f9f';
+import { playMapSound } from './map-sounds.js?v=35850745a3';
+import { showSubtitlesFor } from './map-dumbledore.js?v=35850745a3';
 
 const SPARK_DELAY_MS = 250;
 const REVEAL_DELAY_MS = 1000;

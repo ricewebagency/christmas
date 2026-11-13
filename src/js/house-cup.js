@@ -49,7 +49,7 @@ const houseColumnHtml = (house) => `
             <span data-house-cup-points>0</span>
             <span data-house-cup-gain aria-hidden="true" class="absolute left-full top-0 ml-1 whitespace-nowrap text-xs leading-none text-charcoal/80 opacity-0"></span>
         </span>
-        <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">${HOUSES[house].name}</span>
+        <span class="max-w-full truncate px-0.5 py-0.5 text-[11px] italic leading-none text-charcoal/75">${HOUSES[house].name}</span>
         <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
     </li>`;
 

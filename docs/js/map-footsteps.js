@@ -2,7 +2,7 @@
 // placing alternating prints that ink in and fade out over the trail.
 // Coordinates use the routes' viewBox (200 x 300, same 2:3 ratio as the map sheet).
 // A walker's footsteps sound only plays while its name is shown (tapped) and its feet move.
-import { createMapSoundVoice } from './map-sounds.js?v=93d7544f9f';
+import { createMapSoundVoice } from './map-sounds.js?v=35850745a3';
 
 const VIEWBOX_WIDTH = 200;
 const VIEWBOX_HEIGHT = 300;

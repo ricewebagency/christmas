@@ -8,7 +8,7 @@
 // Plain <audio>, so the global mute toggle silences him too; the subtitles show either way.
 // iOS ignores <audio>.volume, so the voice runs through a Web Audio gain node when the audio context is
 // running (unlocked on the first tap); otherwise it falls back to the element's volume.
-import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js?v=93d7544f9f';
+import { readJsonFromLocalStorage, writeJsonToLocalStorage } from './storage-utils.js?v=35850745a3';
 
 const AUDIO_DIR = new URL('../assets/music/dumbledore/', import.meta.url);
 const SUBTITLES_URL = new URL('../assets/files/dumbledore-subtitles.json', import.meta.url);
@@ -27,9 +27,9 @@ const SORTING_WELCOME = 'A new member deserves a proper welcome';
 // Incantations for Nox / Lumos (speakSpell), named after what he says.
 const SPELL_LINES = {
     lumos: [
-        'Lumos! Light for the tree, light for the hall, light for us all',
+        'Lumos! Let there be light, and perhaps a little pudding',
         'Lumos! Now... where did I leave my lemon drops',
-        'A little light for the season of giving. Lumos!'
+        'Lumos! A little light for the season of giving'
     ],
     nox: [
         'Nox (2)',

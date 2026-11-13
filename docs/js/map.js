@@ -1,15 +1,15 @@
-import { fetchDishCatalog } from './api-client.js?v=93d7544f9f';
-import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=93d7544f9f';
-import { initMapChangesDialog } from './map-changes.js?v=93d7544f9f';
-import { initMapEasterEggs } from './map-easter-eggs.js?v=93d7544f9f';
-import { initMapFinale } from './map-finale.js?v=93d7544f9f';
-import { initMapFootsteps } from './map-footsteps.js?v=93d7544f9f';
-import { initHouseCup } from './house-cup.js?v=93d7544f9f';
-import { initMapReveal } from './map-reveal.js?v=93d7544f9f';
-import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=93d7544f9f';
-import { createEggRewards } from './map-rewards.js?v=93d7544f9f';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=93d7544f9f';
-import './click-pop.js?v=93d7544f9f';
+import { fetchDishCatalog } from './api-client.js?v=35850745a3';
+import { formatChangeDeadline, guardPage, leaveGreatHall, whenDomReady } from './guest-flow.js?v=35850745a3';
+import { initMapChangesDialog } from './map-changes.js?v=35850745a3';
+import { initMapEasterEggs } from './map-easter-eggs.js?v=35850745a3';
+import { initMapFinale } from './map-finale.js?v=35850745a3';
+import { initMapFootsteps } from './map-footsteps.js?v=35850745a3';
+import { initHouseCup } from './house-cup.js?v=35850745a3';
+import { initMapReveal } from './map-reveal.js?v=35850745a3';
+import { runRevealExitSequence, setupLinkExitTransition } from './page-transitions.js?v=35850745a3';
+import { createEggRewards } from './map-rewards.js?v=35850745a3';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=35850745a3';
+import './click-pop.js?v=35850745a3';
 
 const SCREEN_LOADER_SELECTOR = '[data-screen-loader]';
 const SCREEN_LOADER_DURATION_MS = 2400;
@@ -376,6 +376,18 @@ function renderDeclinedView(guest) {
     });
 }
 
+const BACKGROUND_HOUSES = ['gryffindor', 'hufflepuff', 'ravenclaw', 'slytherin'];
+
+// Swaps the desk background for the guest's house (Tailwind data-[house=...] variants in map/index.html).
+function renderHouseBackground(house) {
+    const backgroundEl = document.querySelector('[data-map-background]');
+    const key = String(house ?? '').toLowerCase();
+
+    if (backgroundEl instanceof HTMLElement) {
+        backgroundEl.dataset.house = BACKGROUND_HOUSES.includes(key) ? key : 'default';
+    }
+}
+
 async function bootstrapMapPage() {
     const guest = await guardPage('map');
 
@@ -393,6 +405,7 @@ async function bootstrapMapPage() {
         return;
     }
 
+    renderHouseBackground(guest.house);
     initMap(guest, houseCup);
     renderEventDetails(guest);
     renderChangeControls(guest);

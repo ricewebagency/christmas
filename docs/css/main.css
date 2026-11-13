@@ -961,10 +961,6 @@ video {
   top: 100%;
 }
 
-.bottom-full{
-  bottom: 100%;
-}
-
 .-z-10{
   z-index: -10;
 }
@@ -1068,10 +1064,6 @@ video {
 
 .mb-1{
   margin-bottom: 0.25rem;
-}
-
-.ml-0\.5{
-  margin-left: 0.125rem;
 }
 
 .ml-1{
@@ -1545,10 +1537,6 @@ video {
 
 .w-screen{
   width: 100vw;
-}
-
-.w-0\.5{
-  width: 0.125rem;
 }
 
 .min-w-0{
@@ -2523,10 +2511,6 @@ video {
   background-image: url('../assets/images/chatbox.png');
 }
 
-.bg-\[url\(\'\.\.\/assets\/images\/map\/map-background\.png\'\)\]{
-  background-image: url('../assets/images/map/map-background.png');
-}
-
 .bg-\[url\(\'\.\.\/assets\/images\/parchment-cropped\.png\'\)\]{
   background-image: url('../assets/images/parchment-cropped.png');
 }
@@ -2545,10 +2529,6 @@ video {
 
 .bg-gradient-to-t{
   background-image: linear-gradient(to top, var(--tw-gradient-stops));
-}
-
-.bg-\[repeating-linear-gradient\(to_bottom\2c currentColor_0_2px\2c transparent_2px_6px\)\]{
-  background-image: repeating-linear-gradient(to bottom,currentColor 0 2px,transparent 2px 6px);
 }
 
 .from-\[\#0e1a40\]{
@@ -2728,6 +2708,11 @@ video {
   padding-right: 0px;
 }
 
+.px-0\.5{
+  padding-left: 0.125rem;
+  padding-right: 0.125rem;
+}
+
 .px-1{
   padding-left: 0.25rem;
   padding-right: 0.25rem;
@@ -2781,6 +2766,11 @@ video {
 .px-\[max\(5\.5cqw\2c 1\.125rem\)\]{
   padding-left: max(5.5cqw, 1.125rem);
   padding-right: max(5.5cqw, 1.125rem);
+}
+
+.py-0\.5{
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
 }
 
 .py-1{
@@ -3304,26 +3294,6 @@ video {
   color: rgb(253 224 71 / var(--tw-text-opacity, 1));
 }
 
-.text-\[\#2a6b40\]{
-  --tw-text-opacity: 1;
-  color: rgb(42 107 64 / var(--tw-text-opacity, 1));
-}
-
-.text-\[\#2d4a8a\]{
-  --tw-text-opacity: 1;
-  color: rgb(45 74 138 / var(--tw-text-opacity, 1));
-}
-
-.text-\[\#ae2a1f\]{
-  --tw-text-opacity: 1;
-  color: rgb(174 42 31 / var(--tw-text-opacity, 1));
-}
-
-.text-\[\#ecb939\]{
-  --tw-text-opacity: 1;
-  color: rgb(236 185 57 / var(--tw-text-opacity, 1));
-}
-
 .underline{
   text-decoration-line: underline;
 }
@@ -3600,12 +3570,6 @@ video {
 
 .transition-\[grid-template-rows\]{
   transition-property: grid-template-rows;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-.transition-\[height\]{
-  transition-property: height;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -4635,6 +4599,26 @@ body.audio-gate-visible #sorting-main {
 
 .group[aria-pressed="true"] .group-aria-pressed\:opacity-100{
   opacity: 1;
+}
+
+.data-\[house\=default\]\:bg-\[url\(\'\.\.\/assets\/images\/map\/map-background\.png\'\)\][data-house="default"]{
+  background-image: url('../assets/images/map/map-background.png');
+}
+
+.data-\[house\=gryffindor\]\:bg-\[url\(\'\.\.\/assets\/images\/map\/map-background-gryffindor\.png\'\)\][data-house="gryffindor"]{
+  background-image: url('../assets/images/map/map-background-gryffindor.png');
+}
+
+.data-\[house\=hufflepuff\]\:bg-\[url\(\'\.\.\/assets\/images\/map\/map-background-hufflepuff\.png\'\)\][data-house="hufflepuff"]{
+  background-image: url('../assets/images/map/map-background-hufflepuff.png');
+}
+
+.data-\[house\=ravenclaw\]\:bg-\[url\(\'\.\.\/assets\/images\/map\/map-background-ravenclaw\.png\'\)\][data-house="ravenclaw"]{
+  background-image: url('../assets/images/map/map-background-ravenclaw.png');
+}
+
+.data-\[house\=slytherin\]\:bg-\[url\(\'\.\.\/assets\/images\/map\/map-background-slytherin\.png\'\)\][data-house="slytherin"]{
+  background-image: url('../assets/images/map/map-background-slytherin.png');
 }
 
 .group\/reveal[data-spell="casting"] .group-data-\[spell\=casting\]\/reveal\:pointer-events-none{

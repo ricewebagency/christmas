@@ -1,6 +1,6 @@
-import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=93d7544f9f';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=93d7544f9f';
-import { playMapSound, preloadMapSounds } from './map-sounds.js?v=93d7544f9f';
+import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=35850745a3';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=35850745a3';
+import { playMapSound, preloadMapSounds } from './map-sounds.js?v=35850745a3';
 
 // "House Cup": an hourglass per house, filled relative to the leading house. The button sits bottom-left on every
 // page from the Sorting Hat onwards, for every guest. Guests without a house get a notice in the dialog (and a dot
@@ -49,7 +49,7 @@ const houseColumnHtml = (house) => `
             <span data-house-cup-points>0</span>
             <span data-house-cup-gain aria-hidden="true" class="absolute left-full top-0 ml-1 whitespace-nowrap text-xs leading-none text-charcoal/80 opacity-0"></span>
         </span>
-        <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">${HOUSES[house].name}</span>
+        <span class="max-w-full truncate px-0.5 py-0.5 text-[11px] italic leading-none text-charcoal/75">${HOUSES[house].name}</span>
         <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
     </li>`;
 
