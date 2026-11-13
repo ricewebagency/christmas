@@ -5,8 +5,9 @@ import { playMapSound, preloadMapSounds } from './map-sounds.js';
 // "House Cup": an hourglass per house, filled relative to the leading house. The button sits bottom-left on every
 // page from the Sorting Hat onwards, for every guest. Guests without a house get a notice in the dialog (and a dot
 // on the button). Standings come with the guest state and are refreshed after every egg find on the map.
-// Points other guests earned since this browser last opened the dialog show as a quiet dot, a one-time pulse on page
-// load and a "+N" per house in the dialog.
+// Points other guests earned since this browser last opened the dialog show as a quiet dot and a one-time pulse on
+// page load; in the dialog only those glasses pour, from where the guest last saw them, with a brief "+N".
+// Otherwise all glasses pour from empty, one after the other, the leader last, and its crest lights up.
 const HOUSES = {
     // glow: same colours as in map-rewards.js.
     gryffindor: { name: 'Gryffindor', fill: 'from-[#5c0707] to-[#ae2a1f]', glow: 'rgba(255, 197, 0, 0.55)' },
@@ -14,9 +15,16 @@ const HOUSES = {
     ravenclaw: { name: 'Ravenclaw', fill: 'from-[#0e1a40] to-[#2d4a8a]', glow: 'rgba(148, 107, 45, 0.6)' },
     slytherin: { name: 'Slytherin', fill: 'from-[#10301c] to-[#2a6b40]', glow: 'rgba(170, 170, 170, 0.6)' }
 };
-// An empty-looking glass reads as "no data"; a sliver of sand reads as "nothing yet".
-const MIN_FILL_PERCENT = 3;
-const SEEN_STORAGE_PREFIX = 'house-cup-seen:';
+// Fill = (points / leader's points) ^ FILL_EXPONENT. Below 1 it pulls the glasses together, so trailing houses don't
+// look hopeless: at 1/3, a quarter of the leader's points fills 63% of the glass, half fills 79%. 1 = linear.
+const FILL_EXPONENT = 1 / 3;
+// Pouring starts while the dialog fades in; each next glass a little later.
+const POUR_START_MS = 200;
+const POUR_STAGGER_MS = 120;
+const POUR_MS = 1400;
+// easeOutCubic, for the sand and for the counters, so they arrive together.
+const POUR_EASING = 'cubic-bezier(0.33, 1, 0.68, 1)';
+const easeOutCubic = (t) => 1 - (1 - t) ** 3;const GAIN_MS = 3000;const SEEN_STORAGE_PREFIX = 'house-cup-seen:';
 // After the page has settled, so the pulse isn't lost in the page's own entrance.
 const NEWS_PULSE_DELAY_MS = 1200;
 const PARCHMENT_URL = new URL('../assets/images/parchment-cropped.png', import.meta.url).href;
@@ -33,13 +41,13 @@ const BUTTON_HTML = `
 
 const houseColumnHtml = (house) => `
     <li data-house-cup-house="${house}" class="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-        <img src="${crestUrl(house)}" alt="" class="h-10 w-10 rounded-lg object-contain short:h-8 short:w-8 short:rounded-md">
+        <img data-house-cup-crest src="${crestUrl(house)}" alt="" class="h-10 w-10 rounded-lg object-contain short:h-8 short:w-8 short:rounded-md">
         <div aria-hidden="true" class="relative h-36 w-7 overflow-hidden rounded-full border border-charcoal/40 bg-charcoal/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] short:h-24 short:w-6">
-            <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t ${HOUSES[house].fill} transition-[height] duration-[1400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"></div>
+            <div data-house-cup-fill class="absolute inset-x-0 bottom-0 h-0 rounded-full bg-gradient-to-t ${HOUSES[house].fill}"></div>
         </div>
         <span class="relative text-lg leading-none short:text-base">
             <span data-house-cup-points>0</span>
-            <span data-house-cup-gain class="absolute left-full top-0 ml-0.5 hidden whitespace-nowrap text-[10px] italic leading-none text-charcoal/70"></span>
+            <span data-house-cup-gain aria-hidden="true" class="absolute left-full top-0 ml-1 whitespace-nowrap text-xs leading-none text-charcoal/80 opacity-0"></span>
         </span>
         <span class="max-w-full truncate text-[11px] italic leading-none text-charcoal/75">${HOUSES[house].name}</span>
         <span data-house-cup-own class="invisible text-[10px] italic leading-none text-charcoal/60">your house</span>
@@ -63,7 +71,6 @@ const DIALOG_HTML = `
             <ul aria-label="Points per house" class="mt-5 flex items-end justify-between gap-2 short:mt-3">
                 ${Object.keys(HOUSES).map(houseColumnHtml).join('')}
             </ul>
-            <p data-house-cup-gain-note class="mt-2 hidden text-[11px] italic leading-snug text-charcoal/60">The small numbers are points earned since your last look.</p>
 
             <p data-house-cup-found class="mt-5 text-xs italic leading-snug text-charcoal/75 short:mt-3"></p>
         </div>
@@ -159,10 +166,10 @@ export function initHouseCup(guest) {
     const unsortedHintEl = dialog.querySelector('[data-house-cup-unsorted-hint]');
     const badgeEl = openButton.querySelector('[data-house-cup-badge]');
     const newsEl = openButton.querySelector('[data-house-cup-news]');
-    const gainNoteEl = dialog.querySelector('[data-house-cup-gain-note]');
     const columns = [...dialog.querySelectorAll('[data-house-cup-house]')].map((el) => ({
         house: el.dataset.houseCupHouse,
         el,
+        crestEl: el.querySelector('[data-house-cup-crest]'),
         fillEl: el.querySelector('[data-house-cup-fill]'),
         pointsEl: el.querySelector('[data-house-cup-points]'),
         gainEl: el.querySelector('[data-house-cup-gain]')
@@ -215,37 +222,121 @@ export function initHouseCup(guest) {
         newsEl?.classList.toggle('hidden', !news);
     };
 
-    const renderFill = () => {
+    let pourAnimations = [];
+    let counterFrame = 0;
+
+    const fillPercent = (value, max) => (max > 0 ? Math.max(0, value / max) ** FILL_EXPONENT * 100 : 0);
+
+    const stopPour = () => {
+        pourAnimations.forEach((animation) => animation.cancel());
+        pourAnimations = [];
+        window.cancelAnimationFrame(counterFrame);
+        counterFrame = 0;
+    };
+
+    // The end state at once: after a live update while the dialog is open.
+    const showStandings = () => {
+        stopPour();
         const max = Math.max(...Object.values(points));
 
-        columns.forEach(({ house: column, fillEl }) => {
-            if (fillEl instanceof HTMLElement) {
-                const percent = max > 0 ? Math.max(MIN_FILL_PERCENT, (points[column] / max) * 100) : MIN_FILL_PERCENT;
-                fillEl.style.height = `${percent}%`;
-            }
+        columns.forEach(({ house: column, fillEl, pointsEl }) => {
+            fillEl.style.height = `${fillPercent(points[column] ?? 0, max)}%`;
+            pointsEl.textContent = String(points[column] ?? 0);
         });
     };
 
+    const pour = () => {
+        stopPour();
+        const max = Math.max(...Object.values(points));
+        const motion = !reduceMotion();
+        const withNews = Object.values(shownGains).some((gain) => gain > 0);
+        // With news only the glasses that gained pour, from where the guest last saw them; otherwise all, from empty.
+        // Leader last, so the pour ends on the house in the lead.
+        const pouring = columns
+            .filter(({ house: column }) => !withNews || shownGains[column] > 0)
+            .sort((a, b) => (points[a.house] ?? 0) - (points[b.house] ?? 0))
+            .map((column, index) => {
+                const to = points[column.house] ?? 0;
+                const from = withNews ? to - shownGains[column.house] : 0;
+                return {
+                    ...column,
+                    from,
+                    to,
+                    fromPercent: withNews ? fillPercent(from, max) : 0,
+                    delay: POUR_START_MS + (motion ? index * POUR_STAGGER_MS : 0)
+                };
+            });
+
+        const run = (el, keyframes, options) => pourAnimations.push(el.animate(keyframes, options));
+
+        columns.forEach(({ house: column, fillEl, pointsEl }) => {
+            fillEl.style.height = `${fillPercent(points[column] ?? 0, max)}%`;
+            pointsEl.textContent = String(points[column] ?? 0);
+        });
+
+        pouring.forEach(({ house: column, fillEl, pointsEl, gainEl, from, fromPercent, delay }) => {
+            const toHeight = fillEl.style.height;
+            pointsEl.textContent = String(from);
+
+            if (motion) {
+                run(fillEl, [{ height: `${fromPercent}%` }, { height: toHeight }], { duration: POUR_MS, delay, easing: POUR_EASING, fill: 'backwards' });
+            }
+
+            const gain = shownGains[column] ?? 0;
+
+            if (gain > 0) {
+                gainEl.textContent = `+${gain}`;
+                run(gainEl, motion
+                    ? [
+                        { opacity: 0, transform: 'translateY(4px) scale(0.6)' },
+                        { opacity: 1, transform: 'translateY(0) scale(1.15)', offset: 0.08 },
+                        { opacity: 1, transform: 'translateY(0) scale(1)', offset: 0.16 },
+                        { opacity: 1, transform: 'translateY(0) scale(1)', offset: 0.7 },
+                        { opacity: 0, transform: 'translateY(-10px) scale(0.95)' }
+                    ]
+                    : [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.75 }, { opacity: 0 }],
+                { duration: GAIN_MS, delay: delay + POUR_MS * 0.35, easing: 'ease-out' });
+            }
+        });
+
+        // The counters follow the sand.
+        const startedAt = document.timeline.currentTime ?? performance.now();
+        const tick = (now) => {
+            let running = false;
+
+            pouring.forEach(({ pointsEl, from, to, delay }) => {
+                const t = Math.min(1, Math.max(0, (now - startedAt - delay) / POUR_MS));
+                pointsEl.textContent = String(Math.round(from + (to - from) * easeOutCubic(t)));
+                running ||= t < 1;
+            });
+
+            counterFrame = running ? window.requestAnimationFrame(tick) : 0;
+        };
+        counterFrame = window.requestAnimationFrame(tick);
+
+        // The leader's crest lights up as its glass fills up.
+        const last = pouring.at(-1);
+
+        if (motion && max > 0 && last) {
+            columns
+                .filter(({ house: column }) => points[column] === max)
+                .forEach(({ house: column, crestEl }) => run(crestEl, [
+                    { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 rgba(0, 0, 0, 0))' },
+                    { transform: 'scale(1.12)', filter: `drop-shadow(0 0 8px ${HOUSES[column].glow})`, offset: 0.35 },
+                    { transform: 'scale(1)', filter: 'drop-shadow(0 0 0 rgba(0, 0, 0, 0))' }
+                ], { duration: 1200, delay: last.delay + POUR_MS * 0.7, easing: 'ease-in-out' }));
+        }
+    };
+
     const renderText = () => {
-        columns.forEach(({ house: column, el, pointsEl, gainEl }) => {
+        columns.forEach(({ house: column, el }) => {
             const own = column === house;
             const value = points[column] ?? 0;
             const gain = shownGains[column] ?? 0;
 
-            if (pointsEl instanceof HTMLElement) {
-                pointsEl.textContent = String(value);
-            }
-
-            if (gainEl instanceof HTMLElement) {
-                gainEl.textContent = `+${gain}`;
-                gainEl.classList.toggle('hidden', gain === 0);
-            }
-
             el.querySelector('[data-house-cup-own]')?.classList.toggle('invisible', !own);
             el.setAttribute('aria-label', `${HOUSES[column].name}: ${value} points${gain > 0 ? `, ${gain} since your last look` : ''}${own ? ' (your house)' : ''}`);
         });
-
-        gainNoteEl?.classList.toggle('hidden', !Object.values(shownGains).some((gain) => gain > 0));
 
         if (summaryEl instanceof HTMLElement) {
             summaryEl.textContent = describeStandings(points);
@@ -265,15 +356,7 @@ export function initHouseCup(guest) {
         }
     };
 
-    const emptyFill = () => {
-        columns.forEach(({ fillEl }) => {
-            if (fillEl instanceof HTMLElement) {
-                fillEl.style.height = '0%';
-            }
-        });
-    };
-
-    const close = () => void closeDialogAnimated(dialog).then(emptyFill);
+    const close = () => void closeDialogAnimated(dialog).then(stopPour);
 
     preloadMapSounds(['popup', 'cupPoints']);
 
@@ -285,12 +368,9 @@ export function initHouseCup(guest) {
         markSeen();
         renderButton();
         renderText();
-        emptyFill();
+        pour();
         playMapSound('popup');
         showDialogAnimated(dialog);
-        // Commit the empty glasses first, so the sand pours in.
-        void dialog.offsetWidth;
-        window.requestAnimationFrame(renderFill);
     });
 
     dialog.querySelector('[data-house-cup-close]')?.addEventListener('click', close);
@@ -322,7 +402,7 @@ export function initHouseCup(guest) {
                 // Watching the standings as they change: all of it counts as seen.
                 markSeen();
                 renderText();
-                renderFill();
+                showStandings();
             } else if (seen && house) {
                 // The guest's own points just flew into the cup, so they aren't news.
                 seen = { ...seen, [house]: seen[house] + Math.max(0, (points[house] ?? 0) - (previous[house] ?? 0)) };

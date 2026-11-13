@@ -11,11 +11,11 @@
 // secret mode, desktops), the tap and swipe gestures do the same.
 // Each egg reports itself through `onFound(eggId, { point, delayMs })` (map-rewards.js turns that into house points).
 // Egg ids must match EasterEggs.All in the API.
-import { fetchGuestNames } from './api-client.js?v=02bc12da1f';
-import { playPop } from './click-pop.js?v=02bc12da1f';
-import { speakSpell } from './map-dumbledore.js?v=02bc12da1f';
-import { centerOf } from './map-rewards.js?v=02bc12da1f';
-import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=02bc12da1f';
+import { fetchGuestNames } from './api-client.js?v=93d7544f9f';
+import { playPop } from './click-pop.js?v=93d7544f9f';
+import { speakSpell } from './map-dumbledore.js?v=93d7544f9f';
+import { centerOf } from './map-rewards.js?v=93d7544f9f';
+import { createMapSoundVoice, playMapSound } from './map-sounds.js?v=93d7544f9f';
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const random = (min, max) => min + Math.random() * (max - min);
@@ -108,12 +108,7 @@ function initCompass(mapEl, onFound) {
 
 // Hogwarts folk who turn up on the map once every guest has been named.
 const HOGWARTS_NAMES = [
-    'Harry Potter', 'Ron Weasley', 'Hermione Granger', 'Albus Dumbledore', 'Minerva McGonagall', 'Severus Snape',
-    'Rubeus Hagrid', 'Argus Filch', 'Mrs Norris', 'Peeves', 'Nearly Headless Nick', 'Moaning Myrtle',
-    'The Bloody Baron', 'The Fat Friar', 'The Grey Lady', 'Dobby', 'Kreacher', 'Remus Lupin', 'Sirius Black',
-    'Peter Pettigrew', 'Bartemius Crouch', 'Alastor Moody', 'Luna Lovegood', 'Neville Longbottom',
-    'Ginny Weasley', 'Fred Weasley', 'George Weasley', 'Draco Malfoy', 'Cho Chang', 'Cedric Diggory',
-    'Filius Flitwick', 'Pomona Sprout', 'Horace Slughorn', 'Sybill Trelawney', 'Poppy Pomfrey', 'Oliver Wood'
+    'Severus Snape', 'Albus Dumbledore', 'Peter Pettigrew', 'Remus Lupin', 'Sirius Black', 'Nearly Headless Nick', 'Dobby'
 ];
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 500;

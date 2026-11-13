@@ -108,12 +108,7 @@ function initCompass(mapEl, onFound) {
 
 // Hogwarts folk who turn up on the map once every guest has been named.
 const HOGWARTS_NAMES = [
-    'Harry Potter', 'Ron Weasley', 'Hermione Granger', 'Albus Dumbledore', 'Minerva McGonagall', 'Severus Snape',
-    'Rubeus Hagrid', 'Argus Filch', 'Mrs Norris', 'Peeves', 'Nearly Headless Nick', 'Moaning Myrtle',
-    'The Bloody Baron', 'The Fat Friar', 'The Grey Lady', 'Dobby', 'Kreacher', 'Remus Lupin', 'Sirius Black',
-    'Peter Pettigrew', 'Bartemius Crouch', 'Alastor Moody', 'Luna Lovegood', 'Neville Longbottom',
-    'Ginny Weasley', 'Fred Weasley', 'George Weasley', 'Draco Malfoy', 'Cho Chang', 'Cedric Diggory',
-    'Filius Flitwick', 'Pomona Sprout', 'Horace Slughorn', 'Sybill Trelawney', 'Poppy Pomfrey', 'Oliver Wood'
+    'Severus Snape', 'Albus Dumbledore', 'Peter Pettigrew', 'Remus Lupin', 'Sirius Black', 'Nearly Headless Nick', 'Dobby'
 ];
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 500;
