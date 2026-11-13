@@ -6,10 +6,10 @@
 // Reduced motion: no rockets, just a warm glow behind the note.
 // The bonus for finding everything ("+20", the API keeps score) bursts from the crest as the note appears and flies
 // into the House Cup button.
-import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=929999881f';
-import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=929999881f';
-import { burstHousePoints } from './map-rewards.js?v=929999881f';
-import { isAudioMuted, playMapSound, preloadMapSounds } from './map-sounds.js?v=929999881f';
+import { COMPLETION_BONUS_POINTS, EASTER_EGG_COUNT } from './api-client.js?v=8e67b1c2f6';
+import { closeDialogAnimated, showDialogAnimated } from './dialog-motion.js?v=8e67b1c2f6';
+import { burstHousePoints } from './map-rewards.js?v=8e67b1c2f6';
+import { isAudioMuted, playMapSound, preloadMapSounds } from './map-sounds.js?v=8e67b1c2f6';
 
 const HOUSES = {
     gryffindor: { name: 'Gryffindor', sparks: ['#ff3b2f', '#ff7a2f', '#ffb02e'] },

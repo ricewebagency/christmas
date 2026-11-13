@@ -1,7 +1,7 @@
-import { API_BASE_URL, getStoredGuestCode, setGuestCode } from './api-client.js?v=929999881f';
-import { redirectToPage } from './guest-flow.js?v=929999881f';
-import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=929999881f';
-import './click-pop.js?v=929999881f';
+import { API_BASE_URL, getStoredGuestCode, setGuestCode } from './api-client.js?v=8e67b1c2f6';
+import { redirectToPage } from './guest-flow.js?v=8e67b1c2f6';
+import { readJsonFromLocalStorage, removeLocalStorageItem, writeJsonToLocalStorage } from './storage-utils.js?v=8e67b1c2f6';
+import './click-pop.js?v=8e67b1c2f6';
 
 const SETTINGS_STORAGE_KEY = 'christmas-at-the-great-hall.manage-settings';
 const DISHES_VIEW_STORAGE_KEY = 'christmas-at-the-great-hall.manage-dishes-view';
@@ -144,6 +144,36 @@ function formatDate(value) {
 
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? escapeHtml(value) : escapeHtml(dateFormatter.format(date));
+}
+
+const timeFormatter = new Intl.DateTimeFormat('nl-NL', { timeZone: TIME_ZONE, hour: '2-digit', minute: '2-digit' });
+const dayFormatter = new Intl.DateTimeFormat('nl-NL', { timeZone: TIME_ZONE, weekday: 'short', day: 'numeric', month: 'short' });
+const shortDateFormatter = new Intl.DateTimeFormat('nl-NL', { timeZone: TIME_ZONE, day: 'numeric', month: 'short' });
+// yyyy-mm-dd in de tijdzone van het feest, om regels per dag te groeperen.
+const dayKeyFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+// Kort en relatief: "zojuist", "5 min", "3 u", "2 d", daarna de datum.
+function formatAgo(value) {
+    const date = new Date(value);
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+
+    if (!Number.isFinite(minutes)) {
+        return '';
+    }
+
+    if (minutes < 1) return 'zojuist';
+    if (minutes < 60) return `${minutes} min`;
+    if (minutes < 60 * 24) return `${Math.floor(minutes / 60)} u`;
+    if (minutes < 60 * 24 * 30) return `${Math.floor(minutes / (60 * 24))} d`;
+    return shortDateFormatter.format(date);
+}
+
+function formatDayLabel(date) {
+    const key = dayKeyFormatter.format(date);
+
+    if (key === dayKeyFormatter.format(new Date())) return 'Vandaag';
+    if (key === dayKeyFormatter.format(new Date(Date.now() - 24 * 60 * 60 * 1000))) return 'Gisteren';
+    return dayFormatter.format(date);
 }
 
 function badge(classes, label) {
@@ -450,7 +480,9 @@ function normalizeGuest(guest) {
         createdAt: guest?.createdAt ?? null,
         isAdmin: Boolean(guest?.isAdmin),
         foundEggIds: Array.isArray(guest?.foundEggIds) ? guest.foundEggIds.map(String) : [],
-        housePoints: Number(guest?.housePoints) || 0
+        housePoints: Number(guest?.housePoints) || 0,
+        // Laatste activiteit van de gast zelf (beheeracties tellen niet mee); null = nog nooit.
+        lastActiveAt: guest?.lastActiveAt ?? null
     };
 }
 
@@ -620,6 +652,7 @@ const ICONS = {
     reset: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" />',
     delete: '<path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
     check: '<path d="M20 6 9 17l-5-5" />',
+    activity: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />',
     edit: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
     sparkle: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />'
 };
@@ -659,6 +692,11 @@ function renderGuestRow(guest) {
         ? `<button type="button" data-action="clear-eggs" data-code="${code}" title="${escapeHtml(`${eggTitle}\nKlik om de huispunten te wissen`)}" aria-label="Huispunten van ${name} wissen"
             class="inline-flex w-9 items-center gap-1 rounded text-xs text-accent transition hover:text-red-400 active:scale-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">${icon('sparkle', 'h-3.5 w-3.5')}${eggCount}</button>`
         : `<span class="inline-flex w-9 items-center gap-1 text-xs text-neutral-600" title="${escapeHtml(eggTitle)}">${icon('sparkle', 'h-3.5 w-3.5')}0</span>`;
+    const lastActive = guest.lastActiveAt ? new Date(guest.lastActiveAt) : null;
+    const recentlyActive = lastActive && Date.now() - lastActive.getTime() < 24 * 60 * 60 * 1000;
+    const lastActiveLabel = lastActive
+        ? `<span class="w-12 truncate text-xs ${recentlyActive ? 'text-emerald-400/80' : 'text-neutral-400'}" title="Laatst actief: ${escapeHtml(dateFormatter.format(lastActive))}">${escapeHtml(formatAgo(guest.lastActiveAt))}</span>`
+        : '<span class="w-12 text-xs text-neutral-600" title="Nog geen activiteit">—</span>';
 
     return `
         <article data-guest="${code}" class="transition-colors hover:bg-neutral-800/30">
@@ -679,8 +717,11 @@ function renderGuestRow(guest) {
                     </span>
                     <span class="inline-flex w-9 items-center gap-1 text-xs ${dishCount ? 'text-neutral-300' : 'text-neutral-600'}" title="${escapeHtml(dishTitle)}">${icon('dish', 'h-3.5 w-3.5')}${dishCount}</span>
                     ${eggCounter}
+                    ${lastActiveLabel}
                 </div>
                 <div class="flex shrink-0 items-center">
+                    <button type="button" data-action="activity" data-code="${code}" title="Activiteit" aria-label="Activiteit van ${name}"
+                        class="${ICON_BUTTON} hover:text-accent">${icon('activity')}</button>
                     <button type="button" data-action="edit" data-code="${code}" title="Aanpassen" aria-label="${name} aanpassen"
                         class="${ICON_BUTTON} hover:text-accent">${icon('edit')}</button>
                     <button type="button" data-action="copy-link" data-code="${code}" title="Link kopiëren" aria-label="Link van ${name} kopiëren"
@@ -698,7 +739,9 @@ function renderGuestRow(guest) {
                         <dl class="max-w-xs space-y-0.5">
                             ${guestDate('RSVP', guest.rsvpUpdatedAt)}
                             ${guestDate('Gesorteerd', guest.sortedAt)}
-                            ${guestDate('Gerechten', guest.dishesUpdatedAt)}                        </dl>
+                            ${guestDate('Gerechten', guest.dishesUpdatedAt)}
+                            ${guestDate('Laatst actief', guest.lastActiveAt)}
+                        </dl>
                     </div>
                 </div>
             </div>
@@ -1254,6 +1297,11 @@ async function handleTableClick(event) {
         return;
     }
 
+    if (button.dataset.action === 'activity') {
+        openActivityDialog(guest);
+        return;
+    }
+
     if (button.dataset.action === 'copy-link') {
         copyText(guest.inviteUrl);
         button.innerHTML = icon('check');
@@ -1571,6 +1619,132 @@ function moveLocalCode(oldCode, newCode) {
     }
 }
 
+// ---------- Activiteit ----------
+
+const PAGE_LABELS = {
+    home: 'Start',
+    invite: 'Uitnodiging',
+    rsvp: 'RSVP',
+    sorting: 'Sorting Hat',
+    map: "Marauder's Map",
+    cabin: 'Hogwarts Express',
+    chamber: 'Chamber of Secrets'
+};
+
+// by: 'browser' (bezoek), 'guest' (actie van de gast) of 'admin' (beheeractie).
+const ACTIVITY_TYPES = {
+    page_view: { label: 'Pagina bekeken', by: 'browser' },
+    sign_in: { label: 'Ingelogd', by: 'browser' },
+    rsvp: { label: 'RSVP', by: 'guest' },
+    sorted: { label: 'Gesorteerd', by: 'guest' },
+    dishes: { label: 'Gerechten gekozen', by: 'guest' },
+    egg: { label: 'Easter egg gevonden', by: 'guest' },
+    created: { label: 'Aangemaakt', by: 'admin' },
+    reset: { label: 'Gereset', by: 'admin' },
+    renamed: { label: 'Naam gewijzigd', by: 'admin' },
+    code_changed: { label: 'Pincode gewijzigd', by: 'admin' },
+    eggs_cleared: { label: 'Huispunten gewist', by: 'admin' },
+    admin_granted: { label: 'Admin gemaakt', by: 'admin' },
+    admin_revoked: { label: 'Admin ingetrokken', by: 'admin' }
+};
+
+const ACTIVITY_TONES = {
+    browser: 'text-neutral-300',
+    guest: 'text-emerald-400/90',
+    admin: 'text-neutral-500'
+};
+
+function describeActivity(entry) {
+    const detail = entry.detail ?? '';
+
+    switch (entry.type) {
+        case 'page_view':
+            return PAGE_LABELS[entry.page] ?? entry.page ?? '';
+        case 'sign_in':
+            return entry.page ? `via ${PAGE_LABELS[entry.page] ?? entry.page}` : '';
+        case 'rsvp':
+            return RSVP_LABELS[detail] ?? detail;
+        case 'sorted':
+            return detail.split(' → ').map((house) => HOUSE_LABELS[house] ?? house).join(' → ');
+        case 'egg':
+            return EGG_LABELS[detail] ?? detail;
+        default:
+            return detail;
+    }
+}
+
+function renderActivityRow(entry) {
+    const type = ACTIVITY_TYPES[entry.type] ?? { label: entry.type, by: 'browser' };
+    const at = new Date(entry.at);
+    const adminBadge = type.by === 'admin'
+        ? ` ${badge('text-neutral-500 ring-neutral-700', 'beheer')}`
+        : '';
+
+    return `
+        <tr class="align-top">
+            <td class="whitespace-nowrap py-1.5 pl-4 pr-3 font-mono text-xs text-neutral-500" title="${escapeHtml(`${dateFormatter.format(at)} (${formatAgo(entry.at)})`)}">${escapeHtml(timeFormatter.format(at))}</td>
+            <td class="whitespace-nowrap py-1.5 pr-3 ${ACTIVITY_TONES[type.by]}">${escapeHtml(type.label)}${adminBadge}</td>
+            <td class="py-1.5 pr-4 text-neutral-400 sm:pr-3">${escapeHtml(describeActivity(entry))}</td>
+            <td class="hidden whitespace-nowrap py-1.5 pr-4 text-xs text-neutral-500 sm:table-cell">${escapeHtml(entry.device ?? '')}</td>
+        </tr>`;
+}
+
+function renderActivity(data) {
+    const entries = Array.isArray(data?.entries) ? data.entries : [];
+    const total = Number(data?.totalCount) || entries.length;
+    const guestActions = entries.filter((entry) => ACTIVITY_TYPES[entry.type]?.by !== 'admin').length;
+
+    el('manage-activity-summary').textContent = entries.length
+        ? `${guestActions} door de gast · ${entries.length - guestActions} beheeracties${total > entries.length ? ` · laatste ${entries.length} van ${total}` : ''}`
+        : '';
+
+    if (!entries.length) {
+        el('manage-activity-body').innerHTML = '<p class="px-4 py-8 text-center text-neutral-500">Nog geen activiteit.</p>';
+        return;
+    }
+
+    let currentDay = null;
+    const rows = entries.map((entry) => {
+        const day = formatDayLabel(new Date(entry.at));
+        const header = day === currentDay
+            ? ''
+            : `<tr><th colspan="4" scope="colgroup" class="sticky top-0 bg-neutral-900/95 px-4 pb-1 pt-3 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-500 backdrop-blur-sm">${escapeHtml(day)}</th></tr>`;
+        currentDay = day;
+        return header + renderActivityRow(entry);
+    });
+
+    el('manage-activity-body').innerHTML = `
+        <table class="w-full text-sm motion-safe:animate-fadeInUpFast">
+            <thead class="sr-only">
+                <tr><th scope="col">Tijd</th><th scope="col">Activiteit</th><th scope="col">Details</th><th scope="col">Apparaat</th></tr>
+            </thead>
+            <tbody>${rows.join('')}</tbody>
+        </table>`;
+}
+
+async function openActivityDialog(guest) {
+    const dialog = el('manage-activity-dialog');
+    dialog.dataset.code = guest.code;
+    el('manage-activity-title').textContent = guest.guestName;
+    el('manage-activity-code').textContent = guest.code;
+    el('manage-activity-summary').textContent = '';
+    el('manage-activity-body').innerHTML = `<div class="space-y-2 p-4">${Array.from({ length: 6 }, () => '<div class="h-6 rounded bg-neutral-800/60 motion-safe:animate-pulse"></div>').join('')}</div>`;
+    dialog.showModal();
+
+    try {
+        const data = await request('GET', `/api/manage/guests/${encodeURIComponent(guest.code)}/activity`);
+
+        // Intussen een andere gast geopend of gesloten: dit antwoord niet meer tonen.
+        if (dialog.open && dialog.dataset.code === guest.code) {
+            renderActivity(data);
+        }
+    } catch (error) {
+        if (dialog.dataset.code === guest.code) {
+            el('manage-activity-body').innerHTML = `<p class="px-4 py-8 text-center text-red-400">${escapeHtml(error.message)}</p>`;
+        }
+    }
+}
+
 // ---------- Init ----------
 
 function init() {
@@ -1605,6 +1779,12 @@ function init() {
     el('manage-edit-cancel').addEventListener('click', () => el('manage-edit-dialog').close());
     el('manage-edit-dialog').addEventListener('close', handleCreateDialogClose);
     el('manage-edit-dialog').addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) {
+            event.currentTarget.close();
+        }
+    });
+    el('manage-activity-close').addEventListener('click', () => el('manage-activity-dialog').close());
+    el('manage-activity-dialog').addEventListener('click', (event) => {
         if (event.target === event.currentTarget) {
             event.currentTarget.close();
         }

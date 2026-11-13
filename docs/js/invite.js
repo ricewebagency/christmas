@@ -3,17 +3,17 @@ import {
     pathEndsWith,
     runRevealExitSequence,
     setupLinkExitTransition
-} from "./page-transitions.js?v=929999881f";
+} from "./page-transitions.js?v=8e67b1c2f6";
 import {
     clearGuestCode,
     getStoredGuestCode,
     readGuestCodeFromUrl,
     removeGuestCodeFromUrl,
     verifyGuestCode
-} from "./api-client.js?v=929999881f";
-import { getNextStep, getPageName, getPageUrl, redirectToPage, whenDomReady } from "./guest-flow.js?v=929999881f";
-import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js?v=929999881f";
-import "./click-pop.js?v=929999881f";
+} from "./api-client.js?v=8e67b1c2f6";
+import { getNextStep, getPageName, getPageUrl, redirectToPage, whenDomReady } from "./guest-flow.js?v=8e67b1c2f6";
+import { getPinErrorKind, getPinErrorMessage, openPinDialog } from "./pin-dialog.js?v=8e67b1c2f6";
+import "./click-pop.js?v=8e67b1c2f6";
 
 // The pending text stays in the HTML.
 const REPLY_TEXTS = {

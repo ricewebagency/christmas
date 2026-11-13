@@ -251,6 +251,58 @@ function getBackend() {
     return API_BASE_URL ? backend : mockBackend;
 }
 
+// ---------- Activity log (shown to the organizer in /admin) ----------
+
+// Keep in sync with ActivityTypes.Pages in the API. The home page only routes, so it gets no page_view.
+const TRACKED_PAGES = ['home', 'invite', 'rsvp', 'sorting', 'map', 'cabin', 'chamber'];
+let pageViewSent = false;
+
+// Folder of the current page relative to the site root (<base href>): 'map', 'home', … or null when not tracked.
+function getCurrentPage() {
+    const basePath = new URL(document.baseURI).pathname;
+    const path = window.location.pathname;
+
+    if (!path.startsWith(basePath)) {
+        return null;
+    }
+
+    const segment = path.slice(basePath.length).split('/')[0];
+    const page = segment === '' || segment === 'index.html' ? 'home' : segment;
+    return TRACKED_PAGES.includes(page) ? page : null;
+}
+
+// Fire-and-forget: never throws, never delays the page. Sent as text/plain so no CORS preflight is needed.
+function sendGuestEvent(code, type, page = null) {
+    if (!API_BASE_URL || !code) {
+        return;
+    }
+
+    const url = `${API_BASE_URL}/api/guests/${encodeURIComponent(code)}/events`;
+    const body = JSON.stringify(page ? { type, page } : { type });
+
+    try {
+        if (navigator.sendBeacon?.(url, body)) {
+            return;
+        }
+    } catch {
+        // Fall through to fetch.
+    }
+
+    fetch(url, { method: 'POST', body, keepalive: true, mode: 'no-cors' }).catch(() => {});
+}
+
+// Once per page load, as soon as the guest is known.
+function trackPageView(code) {
+    const page = getCurrentPage();
+
+    if (pageViewSent || !page || page === 'home') {
+        return;
+    }
+
+    pageViewSent = true;
+    sendGuestEvent(code, 'page_view', page);
+}
+
 // ---------- Guest state (cached per page load) ----------
 
 let guestPromise = null;
@@ -266,7 +318,10 @@ export async function verifyGuestCode(code) {
     const normalizedCode = String(code ?? '').replace(/\s+/g, '');
     const data = await getBackend().getGuest(normalizedCode);
     setGuestCode(normalizedCode);
-    return cacheGuest(data);
+    const guest = cacheGuest(data);
+    sendGuestEvent(normalizedCode, 'sign_in', getCurrentPage());
+    trackPageView(normalizedCode);
+    return guest;
 }
 
 export function getGuest({ refresh = false } = {}) {
@@ -275,6 +330,7 @@ export function getGuest({ refresh = false } = {}) {
             const code = requireGuestCode();
             const guest = normalizeGuestState(await getBackend().getGuest(code));
             rememberGuestAdmin(guest.isAdmin);
+            trackPageView(code);
             return guest;
         })();
 
