@@ -1,140 +1,58 @@
 [
   {
-    "course": "Starter course",
-    "course_nl": "Voorgerecht",
+    "course": "Brood & soep",
+    "course_nl": "Brood & soep",
     "dishes": [
-      {
-        "id": 1,
-        "name": "Soup",
-        "name_nl": "Soep",
-        "description": "A warm and comforting start to the feast."
-      },
-      {
-        "id": 2,
-        "name": "Cheese board",
-        "name_nl": "Kaasplank",
-        "description": "A selection of cheeses made for sharing."
-      },
-      {
-        "id": 3,
-        "name": "Bruschetta",
-        "name_nl": "Bruschetta",
-        "description": "Crispy bread topped with fresh and flavourful ingredients."
-      },
-      {
-        "id": 4,
-        "name": "Carpaccio",
-        "name_nl": "Carpaccio",
-        "description": "Thinly sliced beef with a light and elegant topping."
-      }
+      { "id": 1, "name": "Bruschetta", "name_nl": "Bruschetta", "description": "Knapperig brood met een frisse, smaakvolle topping." },
+      { "id": 2, "name": "Stokbroodjes + dips", "name_nl": "Stokbroodjes + dips", "description": "Warme stokbroodjes met kruidenboter, aioli of tapenade." },
+      { "id": 3, "name": "Soep", "name_nl": "Soep", "description": "Een warme pan soep om de avond mee te beginnen." }
     ]
   },
   {
-    "course": "Main course",
-    "course_nl": "Hoofdgerecht",
+    "course": "Plankjes & borrel",
+    "course_nl": "Plankjes & borrel",
     "dishes": [
-      {
-        "id": 5,
-        "name": "Meatballs",
-        "name_nl": "Gehaktballetjes",
-        "description": "Juicy, savoury meatballs full of flavour."
-      },
-      {
-        "id": 6,
-        "name": "Beef stew",
-        "name_nl": "Runderstoofpot",
-        "description": "Slow-cooked beef in a rich and hearty stew."
-      },
-      {
-        "id": 7,
-        "name": "Salmon",
-        "name_nl": "Zalm",
-        "description": "Tender salmon, perfect for a festive dinner."
-      },
-      {
-        "id": 8,
-        "name": "Roast chicken",
-        "name_nl": "Gebraden kip",
-        "description": "Golden roasted chicken, tender and full of flavour."
-      }
+      { "id": 4, "name": "Kaasplankje", "name_nl": "Kaasplankje", "description": "Een mooie selectie kazen om te delen." },
+      { "id": 5, "name": "Vleeswarenplankje", "name_nl": "Vleeswarenplankje", "description": "Ham, worst en andere vleeswaren om te delen." },
+      { "id": 6, "name": "Groenten + dips", "name_nl": "Groenten + dips", "description": "Komkommer, paprika en worteltjes met hummus." },
+      { "id": 7, "name": "Borrelhapjes", "name_nl": "Borrelhapjes", "description": "Olijven, nootjes en chips voor tussendoor." }
     ]
   },
   {
-    "course": "Side dish",
-    "course_nl": "Bijgerecht",
+    "course": "Warme hapjes",
+    "course_nl": "Warme hapjes",
     "dishes": [
-      {
-        "id": 9,
-        "name": "Potato salad",
-        "name_nl": "Aardappelsalade",
-        "description": "A creamy potato salad to complement the feast."
-      },
-      {
-        "id": 10,
-        "name": "Red cabbage",
-        "name_nl": "Rode kool",
-        "description": "Sweet and gently spiced red cabbage."
-      },
-      {
-        "id": 11,
-        "name": "Potatoes",
-        "name_nl": "Aardappelen",
-        "description": "Classic potatoes, a must-have on the dinner table."
-      }
+      { "id": 8, "name": "Rundergehaktballetjes", "name_nl": "Rundergehaktballetjes", "description": "Sappige balletjes van rundergehakt." },
+      { "id": 9, "name": "Bladerdeeghapjes", "name_nl": "Bladerdeeghapjes", "description": "Krokante hapjes van bladerdeeg met een hartige vulling." },
+      { "id": 10, "name": "Mini-quiches", "name_nl": "Mini-quiches", "description": "Kleine hartige taartjes, warm of lauw." },
+      { "id": 11, "name": "Kipspiesjes", "name_nl": "Kipspiesjes", "description": "Gemarineerde kip aan een spiesje." },
+      { "id": 12, "name": "Mini-saucijzenbroodjes", "name_nl": "Mini-saucijzenbroodjes", "description": "Kleine saucijzenbroodjes, vers uit de oven." }
     ]
   },
   {
-    "course": "Dessert",
-    "course_nl": "Nagerecht",
+    "course": "Koude hapjes",
+    "course_nl": "Koude hapjes",
     "dishes": [
-      {
-        "id": 12,
-        "name": "Apple pie",
-        "name_nl": "Appeltaart",
-        "description": "A warm classic filled with sweet, spiced apples."
-      },
-      {
-        "id": 13,
-        "name": "Tiramisu",
-        "name_nl": "Tiramisu",
-        "description": "A creamy Italian favourite with coffee and cocoa."
-      },
-      {
-        "id": 18,
-        "name": "Chocolate lava cake",
-        "name_nl": "Chocolade lava cake",
-        "description": "A warm chocolate cake with a rich, molten centre."
-      }
+      { "id": 13, "name": "Wraprolletjes", "name_nl": "Wraprolletjes", "description": "Gevulde wraps, opgerold en in plakjes gesneden." },
+      { "id": 14, "name": "Salade / pastasalade", "name_nl": "Salade / pastasalade", "description": "Een frisse salade of pastasalade voor op tafel." }
     ]
   },
   {
-    "course": "Drinks & extras",
-    "course_nl": "Dranken & extra's",
+    "course": "Zoet",
+    "course_nl": "Zoet",
     "dishes": [
-      {
-        "id": 14,
-        "name": "Soft drinks",
-        "name_nl": "Frisdrank",
-        "description": "A selection of refreshing drinks for everyone to enjoy."
-      },
-      {
-        "id": 15,
-        "name": "Wine",
-        "name_nl": "Wijn",
-        "description": "A bottle of wine to enjoy alongside the Christmas feast."
-      },
-      {
-        "id": 16,
-        "name": "Beer",
-        "name_nl": "Bier",
-        "description": "A selection of beers to enjoy throughout the evening."
-      },
-      {
-        "id": 17,
-        "name": "Hot chocolate",
-        "name_nl": "Warme chocolademelk",
-        "description": "Rich and warming hot chocolate for a cosy winter evening."
-      }
+      { "id": 15, "name": "Kerstkoekjes", "name_nl": "Kerstkoekjes", "description": "Feestelijke koekjes bij de koffie of thee." },
+      { "id": 16, "name": "Dessert", "name_nl": "Dessert", "description": "Een zoete afsluiter van de avond." }
+    ]
+  },
+  {
+    "course": "Drinken",
+    "course_nl": "Drinken",
+    "dishes": [
+      { "id": 17, "name": "Bier", "name_nl": "Bier", "description": "Een paar biertjes voor de hele avond." },
+      { "id": 18, "name": "Rode wijn", "name_nl": "Rode wijn", "description": "Een fles rode wijn bij het eten." },
+      { "id": 19, "name": "Witte wijn", "name_nl": "Witte wijn", "description": "Een fles witte wijn bij het eten." },
+      { "id": 20, "name": "Frisdrank / sapjes", "name_nl": "Frisdrank / sapjes", "description": "Fris en sap voor iedereen die geen alcohol drinkt." }
     ]
   }
 ]

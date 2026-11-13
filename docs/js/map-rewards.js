@@ -5,9 +5,9 @@
 // Finding an egg again (on any device) stays quiet. Guests who aren't coming or aren't sorted earn nothing.
 // Dumbledore comments on every find (map-dumbledore.js); the banner stays up while he speaks. A new find while a
 // banner is up closes it (and cuts him off), and the new banner takes its place.
-import { sendEasterEggFound } from './api-client.js?v=8a8d7781f5';
-import { preloadDumbledore, speakForEgg } from './map-dumbledore.js?v=8a8d7781f5';
-import { playMapSound } from './map-sounds.js?v=8a8d7781f5';
+import { sendEasterEggFound } from './api-client.js?v=929999881f';
+import { preloadDumbledore, speakForEgg } from './map-dumbledore.js?v=929999881f';
+import { playMapSound } from './map-sounds.js?v=929999881f';
 
 const HOUSES = {
     gryffindor: { name: 'Gryffindor', glow: 'rgba(255, 197, 0, 0.55)' },
